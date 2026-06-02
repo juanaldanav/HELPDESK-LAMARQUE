@@ -1,0 +1,19 @@
+# SECRETOS: nunca subir
+# config.local.php contiene la contraseña de la DB
+config.local.php
+*.local.php
+# smoke.php contiene una contraseña demo en texto
+smoke.php
+.env
+
+# Datos en runtime
+uploads/
+*.log
+
+# Evidencia QA (capturas con datos reales)
+specs/evidencia/
+
+# Sistema
+.DS_Store
+Thumbs.db
+node_modules/
