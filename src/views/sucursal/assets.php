@@ -1,42 +1,71 @@
-<?php /** @var array $cats @var ?string $active @var array $items @var string $q */ ?>
-<h1 class="text-2xl font-extrabold tracking-tight text-slate-900 mb-1">Mis activos</h1>
-<p class="text-slate-500 mb-4">Equipos registrados en tu sucursal, por categoría.</p>
+<?php /** @var array $cats @var ?string $active @var array $items @var string $q */
+$activeCat = null;
+foreach ($cats as $c) if ($c['key'] === $active) { $activeCat = $c; break; }
+?>
+<div class="max-w-md md:max-w-3xl lg:max-w-5xl mx-auto">
+  <h1 class="text-[26px] font-extrabold tracking-tight leading-tight mb-4">Mis activos</h1>
 
-<!-- Desglose por categoría -->
-<div class="flex flex-wrap gap-2 mb-5">
-  <?php foreach ($cats as $c): ?>
-    <a href="<?= h(url('assets', ['cat' => $c['key']])) ?>"
-       class="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium border transition
-              <?= $active === $c['key'] ? 'bg-brand text-white border-brand' : 'bg-white text-slate-700 border-slate-200 hover:border-brand/40' ?>">
-      <?= h($c['label']) ?>
-      <span class="inline-grid place-items-center min-w-5 h-5 px-1.5 rounded-full text-xs
-                   <?= $active === $c['key'] ? 'bg-white/20' : 'bg-slate-100 text-slate-600' ?>"><?= (int)$c['count'] ?></span>
-    </a>
-  <?php endforeach; ?>
-</div>
+  <!-- Buscador -->
+  <form method="get" class="relative mb-4">
+    <input type="hidden" name="r" value="assets">
+    <input type="hidden" name="cat" value="<?= h($active) ?>">
+    <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 text-faint pointer-events-none" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+    <input type="search" name="q" value="<?= h($q) ?>" placeholder="Buscar por folio LMQ o nombre…" class="fld" style="padding-left:42px">
+  </form>
 
-<form method="get" class="mb-4">
-  <input type="hidden" name="r" value="assets">
-  <input type="hidden" name="cat" value="<?= h($active) ?>">
-  <input type="search" name="q" value="<?= h($q) ?>" placeholder="Buscar por folio o nombre…"
-         class="w-full max-w-md rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-brand outline-none">
-</form>
-
-<?php if (empty($items)): ?>
-  <div class="bg-white rounded-xl border border-slate-200 p-8 text-center text-slate-400">Sin activos en esta categoría.</div>
-<?php else: ?>
-  <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-    <?php foreach ($items as $a): ?>
-      <div class="bg-white rounded-xl border border-slate-200 p-4">
-        <div class="flex items-start justify-between gap-2">
-          <div class="font-semibold text-slate-800"><?= h($a['name']) ?></div>
-          <span class="shrink-0 text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600"><?= h($a['state_name']) ?></span>
-        </div>
-        <div class="text-xs font-mono text-slate-500 mt-1"><?= h($a['serial']) ?></div>
-        <?php if (!empty($a['drive_url'])): ?>
-          <a href="<?= h($a['drive_url']) ?>" target="_blank" class="inline-block mt-2 text-xs px-2.5 py-1 rounded-lg bg-brand-light text-brand-dark font-medium hover:bg-brand/20">Ver referencia</a>
-        <?php endif; ?>
-      </div>
+  <!-- ⭐ Tarjetas de categoría (color propio por categoría) -->
+  <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5 stagger mb-6">
+    <?php foreach ($cats as $c):
+        $on = $active === $c['key'];
+        $col = asset_color($c['key']); ?>
+      <a href="<?= h(url('assets', array_filter(['cat' => $c['key'], 'q' => $q]))) ?>"
+         class="tap relative rounded-card p-3.5 text-left transition-colors duration-200 block"
+         style="<?= $on ? 'background:' . $col : '' ?>" <?= $on ? '' : 'data-off' ?>>
+        <?php if (!$on): ?><span class="absolute inset-0 rounded-card bg-surface"></span><?php endif; ?>
+        <span class="relative block">
+          <span class="flex items-start justify-between mb-3">
+            <span class="w-10 h-10 grid place-items-center rounded-xl"
+                  style="<?= $on ? 'background:rgba(255,255,255,.15);color:#fff' : 'background:' . $col . '1a;color:' . $col ?>">
+              <?= svg_icon($c['key'], 22) ?>
+            </span>
+            <span class="text-[26px] font-extrabold leading-none mt-0.5 <?= $on ? 'text-white' : 'text-ink' ?>"><?= (int)$c['count'] ?></span>
+          </span>
+          <span class="block text-[12.5px] font-bold leading-tight <?= $on ? 'text-white' : 'text-ink' ?>"><?= h($c['label']) ?></span>
+        </span>
+      </a>
     <?php endforeach; ?>
   </div>
-<?php endif; ?>
+
+  <!-- Encabezado dinámico -->
+  <?php if ($activeCat): ?>
+    <div class="flex items-center gap-2 mb-3">
+      <h2 class="text-[15px] font-extrabold tracking-tight"><?= h($activeCat['label']) ?></h2>
+      <span class="text-[12px] font-bold text-brand-dark bg-brand-tint px-2 py-0.5 rounded-full"><?= (int)$activeCat['count'] ?> equipos</span>
+      <?php if ($q !== ''): ?><span class="text-[12px] text-muted">· filtro “<?= h($q) ?>”</span><?php endif; ?>
+    </div>
+  <?php endif; ?>
+
+  <!-- Lista de activos -->
+  <?php if (empty($items)): ?>
+    <div class="bg-surface rounded-card p-8 text-center text-muted font-semibold">Sin activos en esta categoría<?= $q !== '' ? ' con ese filtro' : '' ?>.</div>
+  <?php else: ?>
+    <div class="space-y-2.5 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-2.5 md:space-y-0">
+      <?php foreach ($items as $a): ?>
+        <div class="bg-surface rounded-card p-4">
+          <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0">
+              <div class="font-bold text-[14.5px] text-ink leading-snug"><?= h($a['name']) ?></div>
+              <div class="text-[12px] font-mono text-faint mt-1"><?= h($a['serial']) ?></div>
+            </div>
+            <span class="shrink-0"><?= asset_state_dot((int)$a['states_id'], $a['state_name']) ?></span>
+          </div>
+          <?php if (!empty($a['drive_url'])): ?>
+            <a href="<?= h($a['drive_url']) ?>" target="_blank" class="tap inline-flex items-center gap-1.5 text-[12px] font-bold mt-3 text-brand-dark">
+              <?= svg_icon('external', 13) ?> Ver referencia
+            </a>
+          <?php endif; ?>
+        </div>
+      <?php endforeach; ?>
+    </div>
+  <?php endif; ?>
+</div>

@@ -9,12 +9,10 @@ $method = $_SERVER['REQUEST_METHOD'];
 function save_photo(?array $file, int $ticketId): ?string
 {
     if (!$file || ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) return null;
-    $allowed = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'image/heic' => 'heic'];
+    $allowed = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'image/heic' => 'heic', 'image/heif' => 'heic', 'image/gif' => 'gif'];
     $mime = mime_content_type($file['tmp_name']) ?: '';
     $ext = $allowed[$mime] ?? null;
-    if (!$ext) {
-        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION)) ?: 'jpg';
-    }
+    if (!$ext) { error_log("[soporte-v2 upload] rechazado mime=$mime"); return null; } // solo imágenes; sin fallback a extensión
     $dir = rtrim(cfg('uploads_dir'), '/\\') . '/' . $ticketId;
     if (!is_dir($dir)) @mkdir($dir, 0775, true);
     $fname = bin2hex(random_bytes(8)) . '.' . $ext;
@@ -249,7 +247,13 @@ try {
             if ($rel) $sheet .= "\n[foto:$rel]";
             Followups::add($id, $u['id'], $sheet, 0, 4);
             Tickets::close($id);
-            notify_closed($id);
+            // PDF de hoja de servicio + correo de cierre con adjunto (best-effort)
+            $pdfPath = null;
+            try {
+                $tFull = Tickets::get($id);
+                if ($tFull) $pdfPath = service_sheet_pdf($tFull, Followups::thread($tFull), linked_assets_full($id));
+            } catch (Throwable $e) { error_log('[soporte-v2 pdf] ' . $e->getMessage()); }
+            notify_closed($id, $pdfPath);
             redirect('tec/detail', ['id' => $id, 'ok' => 1]);
             break;
 
@@ -394,12 +398,73 @@ try {
             ]));
             break;
 
+        // ---------- GESTIÓN DE EQUIPO (Dalia) ----------
+        case 'dalia/users':
+            $u = require_role(['dalia']);
+            render('dalia/users', [
+                'title' => 'Equipo', 'users' => Users::managed(),
+                'sucursales' => Users::sucursales(), 'me' => $u,
+                'ok' => $_GET['ok'] ?? '', 'err' => $_GET['err'] ?? '',
+            ]);
+            break;
+
+        case 'dalia/user/save':
+            $u = require_role(['dalia']);
+            csrf_check();
+            $uid = (int)($_POST['uid'] ?? 0);
+            if ($uid === (int)$u['id']) redirect('dalia/users', ['err' => 'No puedes modificar tu propia cuenta.']);
+            if (!Users::isManaged($uid)) redirect('dalia/users', ['err' => 'Esa cuenta no se puede gestionar desde aquí.']);
+            $role = $_POST['role'] ?? '';
+            $entity = (int)($_POST['entity'] ?? 0);
+            if (!in_array($role, ['sucursal', 'tecnico', 'dalia'], true)) redirect('dalia/users', ['err' => 'Rol inválido.']);
+            if ($role === 'sucursal' && $entity <= 0) redirect('dalia/users', ['err' => 'Elige la sucursal para el rol Sucursal.']);
+            Users::setRole($uid, $role, $entity);
+            Users::setActive($uid, !empty($_POST['active']));
+            redirect('dalia/users', ['ok' => 'Usuario actualizado.']);
+            break;
+
+        case 'dalia/user/password':
+            $u = require_role(['dalia']);
+            csrf_check();
+            $uid = (int)($_POST['uid'] ?? 0);
+            $pass = $_POST['pass'] ?? '';
+            if ($uid === (int)$u['id']) redirect('dalia/users', ['err' => 'No puedes modificar tu propia cuenta.']);
+            if (!Users::isManaged($uid)) redirect('dalia/users', ['err' => 'Esa cuenta no se puede gestionar desde aquí.']);
+            if (strlen($pass) < 8) redirect('dalia/users', ['err' => 'La contraseña debe tener al menos 8 caracteres.']);
+            Users::setPassword($uid, $pass);
+            redirect('dalia/users', ['ok' => 'Contraseña restablecida.']);
+            break;
+
+        case 'dalia/user/create':
+            $u = require_role(['dalia']);
+            csrf_check();
+            $res = Users::createManaged(
+                $_POST['login'] ?? '', trim($_POST['firstname'] ?? ''), trim($_POST['realname'] ?? ''),
+                trim($_POST['email'] ?? ''), $_POST['pass'] ?? '',
+                $_POST['role'] ?? '', (int)($_POST['entity'] ?? 0)
+            );
+            if ($res['ok']) redirect('dalia/users', ['ok' => 'Usuario creado.']);
+            redirect('dalia/users', ['err' => $res['error']]);
+            break;
+
         case 'print':
             $u = require_login();
             $t = Tickets::get((int)($_GET['id'] ?? 0)); // scope sucursal aplicado en get()
             if (!$t) { deny('Este ticket no está disponible para tu cuenta.', 404); }
             render('print', ['t' => $t, 'thread' => Followups::thread($t), 'assets' => linked_assets_full((int)$t['id'])], false);
             break;
+
+        case 'pdf':
+            $u = require_login();
+            $t = Tickets::get((int)($_GET['id'] ?? 0)); // scope sucursal aplicado en get()
+            if (!$t) { deny('Este ticket no está disponible para tu cuenta.', 404); }
+            $p = service_sheet_pdf($t, Followups::thread($t), linked_assets_full((int)$t['id']));
+            if (!$p) { deny('No se pudo generar el PDF.', 500); }
+            header('Content-Type: application/pdf');
+            header('Content-Disposition: inline; filename="hoja-servicio-' . (int)$t['id'] . '.pdf"');
+            header('Content-Length: ' . filesize($p));
+            readfile($p);
+            exit;
 
         default:
             if (current_user()) redirect(home_route_for(current_user()['role']));

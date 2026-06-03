@@ -36,7 +36,23 @@ function smtp_settings(): array
     return $s;
 }
 
-function send_mail(?string $to, string $subject, string $html): bool
+// Envuelve el contenido en la plantilla de marca (header turquesa + footer).
+function mail_wrap(string $title, string $inner): string
+{
+    return '<div style="background:#f3f5f5;padding:24px 12px;font-family:\'Segoe UI\',Arial,sans-serif">'
+        . '<div style="max-width:560px;margin:0 auto">'
+        . '<div style="background:#006970;border-radius:14px 14px 0 0;padding:15px 22px">'
+        . '<span style="color:#ffffff;font-weight:800;font-size:16px;letter-spacing:.2px">Soporte Lamarque</span></div>'
+        . '<div style="background:#ffffff;border-radius:0 0 14px 14px;padding:22px;color:#1f2a2b;font-size:14px;line-height:1.55">'
+        . '<h2 style="margin:0 0 12px;font-size:17px;color:#0f1c1d">' . htmlspecialchars($title, ENT_QUOTES) . '</h2>'
+        . $inner
+        . '</div>'
+        . '<p style="text-align:center;color:#90a0a0;font-size:11.5px;margin-top:12px">'
+        . 'Lamarque Repostería &amp; Café · Portal de mantenimiento<br>Mensaje automático — no responder.</p>'
+        . '</div></div>';
+}
+
+function send_mail(?string $to, string $subject, string $html, array $attachments = []): bool
 {
     $cfg = cfg('smtp');
     if (empty($cfg['enabled'])) {
@@ -72,14 +88,18 @@ function send_mail(?string $to, string $subject, string $html): bool
         $mail->isHTML(true);
         $mail->Subject = $subject;
 
-        $body = $html;
+        $inner = $html;
         if ($redirect && $to && $to !== $redirect) {
-            $body = "<p style='background:#fffbe6;padding:8px;border-radius:6px;font-size:13px'>"
-                . "↪ <b>Modo pruebas:</b> destinatario real era <b>" . htmlspecialchars($to, ENT_QUOTES) . "</b>. "
+            $inner = "<p style='background:#fff8e1;padding:9px 12px;border-radius:8px;font-size:12.5px;color:#7a5a00'>"
+                . "<b>Modo pruebas:</b> destinatario real era <b>" . htmlspecialchars($to, ENT_QUOTES) . "</b>. "
                 . "Reenviado a sistemas@lamarque.mx.</p>" . $html;
         }
-        $mail->Body    = $body;
+        $mail->Body    = mail_wrap($subject, $inner);
         $mail->AltBody = strip_tags(str_replace(['<br>', '</p>'], "\n", $html));
+        foreach ($attachments as $att) {
+            if (is_array($att) && is_file($att[0])) $mail->addAttachment($att[0], $att[1] ?? basename($att[0]));
+            elseif (is_string($att) && is_file($att)) $mail->addAttachment($att);
+        }
         $mail->send();
         return true;
     } catch (Throwable $e) {

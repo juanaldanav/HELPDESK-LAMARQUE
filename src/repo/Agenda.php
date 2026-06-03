@@ -12,20 +12,31 @@ class Agenda
         'Otro',
     ];
 
-    // Color sólido por tipo (clases Tailwind para el pill del calendario).
+    // Color sólido por tipo (hex del design-system §1.2 — usar en style="background:…").
     const TIPO_COLOR = [
-        'Filtro de Agua'            => 'bg-sky-600',
-        'Maquina de Hielo'          => 'bg-cyan-700',
-        'Refrigeradores y Vitrinas' => 'bg-blue-700',
-        'Minisplit A/C'             => 'bg-indigo-600',
-        'Café Marino'               => 'bg-amber-700',
-        'Correctivo'                => 'bg-red-600',
-        'Otro'                      => 'bg-slate-600',
+        'Filtro de Agua'            => '#0c83c4',
+        'Maquina de Hielo'          => '#0e8091',
+        'Refrigeradores y Vitrinas' => '#2456c4',
+        'Minisplit A/C'             => '#5a4bd1',
+        'Café Marino'               => '#b5610f',
+        'Correctivo'                => '#d83a34',
+        'Otro'                      => '#5d6f70',
+    ];
+
+    // Icono por tipo de mantenimiento (svg_icon name)
+    const TIPO_ICON = [
+        'Filtro de Agua'            => 'drop',
+        'Maquina de Hielo'          => 'snow',
+        'Refrigeradores y Vitrinas' => 'refrigeracion',
+        'Minisplit A/C'             => 'air',
+        'Café Marino'               => 'maquinariadecafe',
+        'Correctivo'                => 'wrench',
+        'Otro'                      => 'wrench',
     ];
 
     public static function tipoColor(string $tipo): string
     {
-        return self::TIPO_COLOR[$tipo] ?? 'bg-slate-600';
+        return self::TIPO_COLOR[$tipo] ?? '#5d6f70';
     }
 
     // Eventos cuyo rango toca el mes (y,m). Filtros opcionales: entity, tipo.

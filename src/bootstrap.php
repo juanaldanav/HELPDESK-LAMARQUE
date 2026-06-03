@@ -19,6 +19,7 @@ require __DIR__ . '/db.php';
 require __DIR__ . '/helpers.php';
 require __DIR__ . '/auth.php';
 require __DIR__ . '/mailer.php';
+require __DIR__ . '/pdf.php';
 require __DIR__ . '/repo/Users.php';
 require __DIR__ . '/repo/Tickets.php';
 require __DIR__ . '/repo/Followups.php';

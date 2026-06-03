@@ -67,17 +67,25 @@ tailwind.config = { theme: { extend: {
     </a>
     <nav class="flex items-center gap-1 text-sm">
       <?php if ($u['role'] === 'sucursal'): ?>
-        <a href="<?= h(url('home')) ?>" class="px-3 py-1.5 rounded-xl font-semibold hover:bg-white/10">Inicio</a>
-        <a href="<?= h(url('tickets')) ?>" class="px-3 py-1.5 rounded-xl font-semibold hover:bg-white/10">Tickets</a>
-        <a href="<?= h(url('assets')) ?>" class="px-3 py-1.5 rounded-xl font-semibold hover:bg-white/10">Activos</a>
+        <a href="<?= h(url('home')) ?>" class="hidden md:block px-3 py-1.5 rounded-xl font-semibold hover:bg-white/10">Inicio</a>
+        <a href="<?= h(url('tickets')) ?>" class="hidden md:block px-3 py-1.5 rounded-xl font-semibold hover:bg-white/10">Tickets</a>
+        <a href="<?= h(url('assets')) ?>" class="hidden md:block px-3 py-1.5 rounded-xl font-semibold hover:bg-white/10">Activos</a>
       <?php elseif ($u['role'] === 'tecnico'): ?>
         <a href="<?= h(url('tec/home')) ?>" class="px-3 py-1.5 rounded-xl font-semibold hover:bg-white/10">Mis tareas</a>
-      <?php elseif ($u['role'] === 'dalia'): ?>
-        <a href="<?= h(url('dalia/dashboard')) ?>" class="px-3 py-1.5 rounded-xl font-semibold hover:bg-white/10">Dashboard</a>
-        <a href="<?= h(url('dalia/tickets')) ?>" class="px-3 py-1.5 rounded-xl font-semibold hover:bg-white/10">Tickets</a>
-        <a href="<?= h(url('dalia/calendar')) ?>" class="px-3 py-1.5 rounded-xl font-semibold hover:bg-white/10">Calendario</a>
-        <a href="<?= h(url('dalia/assets')) ?>" class="px-3 py-1.5 rounded-xl font-semibold hover:bg-white/10">Activos</a>
-      <?php endif; ?>
+      <?php elseif ($u['role'] === 'dalia'):
+          $cur = $_GET['r'] ?? 'dalia/dashboard';
+          $links = [
+              ['dalia/dashboard', 'Dashboard'],
+              ['dalia/tickets',   'Tickets'],
+              ['dalia/calendar',  'Calendario'],
+              ['dalia/assets',    'Activos'],
+              ['dalia/users',     'Equipo'],
+          ];
+          foreach ($links as [$route, $lbl]):
+              $on = str_starts_with($cur, $route) || ($route === 'dalia/tickets' && $cur === 'dalia/view') || ($route === 'dalia/users' && str_starts_with($cur, 'dalia/user'));
+      ?>
+        <a href="<?= h(url($route)) ?>" class="px-3.5 py-2 rounded-xl font-bold <?= $on ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10' ?>"><?= $lbl ?></a>
+      <?php endforeach; endif; ?>
       <a href="<?= h(url('logout')) ?>" class="tap ml-1 px-3 py-1.5 rounded-xl bg-white/12 font-bold hover:bg-white/20">Salir</a>
       <span class="hidden md:grid w-9 h-9 ml-1 place-items-center rounded-xl bg-white text-brand-dark font-extrabold text-[12px]"><?php
         $ini = mb_strtoupper(mb_substr($u['display'], 0, 1));
@@ -89,6 +97,30 @@ tailwind.config = { theme: { extend: {
   </div>
 </header>
 <?php endif; ?>
-<main class="max-w-6xl mx-auto px-4 py-6"><?= $content ?></main>
+<main class="max-w-6xl mx-auto px-4 py-6 <?= $u && $u['role'] === 'sucursal' ? 'pb-28 md:pb-6' : '' ?>"><?= $content ?></main>
+
+<?php
+// Tab bar solo en pantallas raíz; las de detalle (nuevo ticket, hilo) son "push" con su propia barra.
+$rNow = $_GET['r'] ?? 'home';
+$rootTabs = in_array($rNow, ['home', 'tickets', 'assets'], true);
+if ($u && $u['role'] === 'sucursal' && $rootTabs):
+    $r = $rNow;
+    $tab = $r === 'tickets' ? 'tickets' : ($r === 'assets' ? 'assets' : 'home');
+    $tabs = [
+        ['home',    'Inicio',  url('home'),    '<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9.5 21v-6h5v6"/>'],
+        ['tickets', 'Tickets', url('tickets'), '<path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4Z"/><path d="M14 5v14"/>'],
+        ['assets',  'Activos', url('assets'),  '<path d="M3.5 7 12 3l8.5 4-8.5 4Z"/><path d="M3.5 7v10l8.5 4 8.5-4V7"/><path d="M12 11v10"/>'],
+    ];
+?>
+<!-- Tab bar inferior (solo móvil, rol sucursal) -->
+<nav class="md:hidden fixed bottom-0 left-0 right-0 z-20 bg-surface px-2 pt-1.5 pb-4 flex items-stretch">
+  <?php foreach ($tabs as [$key, $label, $href, $glyph]): $on = $tab === $key; ?>
+    <a href="<?= h($href) ?>" class="tap flex-1 flex flex-col items-center justify-center gap-1 py-1 <?= $on ? 'text-brand' : 'text-faint' ?>">
+      <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="<?= $on ? '2.1' : '1.8' ?>" stroke-linecap="round" stroke-linejoin="round"><?= $glyph ?></svg>
+      <span class="text-[10.5px] font-bold tracking-tight"><?= $label ?></span>
+    </a>
+  <?php endforeach; ?>
+</nav>
+<?php endif; ?>
 </body>
 </html>

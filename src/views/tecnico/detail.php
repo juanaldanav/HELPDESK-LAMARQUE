@@ -1,6 +1,6 @@
 <?php /** @var array $t @var array $thread @var array $assets @var bool $ok */
 $open = is_open_status((int)$t['status']); ?>
-<div class="max-w-md md:max-w-3xl lg:max-w-5xl mx-auto <?= $open ? 'pb-24 lg:pb-0' : '' ?>" x-data="{ sheet:false }">
+<div class="max-w-md md:max-w-3xl lg:max-w-5xl mx-auto <?= $open ? 'pb-36 lg:pb-0' : '' ?>" x-data="{ sheet:false }">
 
   <a href="<?= h(url('tec/home')) ?>" class="tap inline-flex items-center gap-1 text-[14px] font-semibold text-muted -ml-1 px-1 py-1 rounded-xl">
     <?= svg_icon('back', 20) ?> Mis tareas
@@ -164,7 +164,7 @@ $open = is_open_status((int)$t['status']); ?>
   <?php else: ?>
     <div class="mt-5 bg-surface rounded-card px-4 py-3.5 flex items-center justify-between gap-3">
       <span class="text-[13.5px] font-semibold text-muted">Ticket cerrado.</span>
-      <a href="<?= h(url('print', ['id' => $t['id']])) ?>" target="_blank" class="tap shrink-0 inline-flex items-center gap-1.5 text-[12.5px] font-bold px-3 py-2 rounded-xl bg-brand-tint text-brand-dark">
+      <a href="<?= h(url('pdf', ['id' => $t['id']])) ?>" target="_blank" class="tap shrink-0 inline-flex items-center gap-1.5 text-[12.5px] font-bold px-3 py-2 rounded-xl bg-brand-tint text-brand-dark">
         <?= svg_icon('check', 15) ?> Hoja / PDF
       </a>
     </div>

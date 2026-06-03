@@ -85,12 +85,15 @@ function notify_agendado(int $agendaId): void
     send_mail(entity_email((int)$a['entities_id']), "Mantenimiento programado en tu sucursal: " . $a['tipo'], $body);
 }
 
-function notify_closed(int $ticketId): void
+function notify_closed(int $ticketId, ?string $pdfPath = null): void
 {
     $t = q_one("SELECT name, entities_id FROM glpi_tickets WHERE id = :id", [':id' => $ticketId]);
-    $to = entity_email((int)($t['entities_id'] ?? 0));
-    send_mail($to, "Ticket #$ticketId resuelto",
-        "<p>Tu ticket <b>#$ticketId</b> (" . h($t['name'] ?? '') . ") fue marcado como resuelto.</p><p>Revisa la hoja de servicio en el portal.</p><p>— Soporte Lamarque</p>");
+    $att = $pdfPath ? [[$pdfPath, 'hoja-servicio-' . $ticketId . '.pdf']] : [];
+    $body = "<p>Tu ticket <b>#$ticketId</b> (" . h($t['name'] ?? '') . ") fue atendido y cerrado.</p>"
+        . ($pdfPath ? "<p>Adjuntamos la <b>hoja de servicio en PDF</b> con el detalle del trabajo realizado.</p>" : "<p>Revisa la hoja de servicio en el portal.</p>");
+    send_mail(entity_email((int)($t['entities_id'] ?? 0)), "Ticket #$ticketId resuelto", $body, $att);
+    // Copia a Dalia (coordinación)
+    send_mail(user_email(23), "Cierre de ticket #$ticketId — " . h($t['name'] ?? ''), $body, $att);
 }
 
 // ---- KPIs del dashboard de Dalia (periodo 'YYYY-MM') ----

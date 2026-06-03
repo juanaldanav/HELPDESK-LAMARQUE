@@ -1,60 +1,81 @@
 <?php /** @var array $t @var array $thread @var array $assets @var array $tecnicos @var bool $ok */ ?>
-<a href="<?= h(url('dalia/tickets')) ?>" class="text-sm text-slate-500 hover:text-slate-700">&larr; Tickets</a>
+<a href="<?= h(url('dalia/tickets')) ?>" class="tap inline-flex items-center gap-1 text-[14px] font-semibold text-muted -ml-1 px-1 py-1 rounded-xl">
+  <?= svg_icon('back', 20) ?> Tickets
+</a>
 
 <?php if (!empty($ok)): ?>
-  <div class="mt-3 bg-green-50 border border-green-200 text-green-800 rounded-xl px-4 py-3 text-sm">✓ Ticket actualizado.</div>
+  <div class="mt-3 bg-brand-tint text-brand-dark font-semibold rounded-card px-4 py-3 text-[13.5px] flex items-center gap-2">
+    <?= svg_icon('check', 18) ?> Ticket actualizado.
+  </div>
 <?php endif; ?>
 
-<div class="mt-3 mb-5">
-  <div class="text-xs font-medium text-brand-dark"><?= h($t['entity_name']) ?></div>
-  <div class="flex items-start justify-between gap-3 mt-0.5">
-    <h1 class="text-xl font-extrabold tracking-tight text-slate-900">#<?= (int)$t['id'] ?> · <?= h($t['name']) ?></h1>
-    <?= status_chip((int)$t['status']) ?>
+<div class="flex flex-wrap items-start justify-between gap-3 mt-3 mb-6">
+  <div>
+    <div class="text-[11px] font-bold uppercase tracking-wide text-brand-dark flex items-center gap-1"><?= svg_icon('building', 13) ?> <?= h($t['entity_name']) ?></div>
+    <div class="flex flex-wrap items-center gap-3 mt-1">
+      <h1 class="text-[24px] font-extrabold tracking-tight">#<?= (int)$t['id'] ?> · <?= h($t['name']) ?></h1>
+      <?= status_chip((int)$t['status']) ?>
+    </div>
+    <div class="flex items-center gap-2.5 mt-2 text-[13px] font-semibold text-muted">
+      <span><?= h($t['cat_name'] ?: 'General') ?></span>
+      <span class="w-1 h-1 rounded-full bg-faint/50"></span>
+      <?= urgency_chip((int)$t['urgency']) ?>
+    </div>
   </div>
-  <div class="text-sm text-slate-500 mt-1"><?= h($t['cat_name'] ?? '—') ?> · <?= urgency_chip((int)$t['urgency']) ?></div>
-  <a href="<?= h(url('print', ['id' => $t['id']])) ?>" target="_blank" class="inline-block mt-2 text-sm px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50">🖨️ Imprimir / PDF</a>
+  <a href="<?= h(url('pdf', ['id' => $t['id']])) ?>" target="_blank" class="tap inline-flex items-center gap-2 bg-surface text-ink text-[13px] font-bold rounded-xl px-4 py-2.5">
+    <?= svg_icon('print', 16) ?> Imprimir / PDF
+  </a>
 </div>
 
-<div class="grid md:grid-cols-3 gap-5">
-  <div class="md:col-span-2 space-y-4">
+<div class="grid lg:grid-cols-3 gap-5 items-start">
+  <!-- Timeline -->
+  <div class="lg:col-span-2">
     <?php partial('timeline', ['thread' => $thread]); ?>
   </div>
 
-  <div class="space-y-4">
-    <!-- Asignar técnico -->
-    <form method="post" action="<?= h(url('dalia/assign')) ?>" class="bg-white rounded-xl border-2 border-brand/30 p-4">
+  <!-- Sidebar -->
+  <div class="space-y-4 lg:sticky lg:top-20">
+    <form method="post" action="<?= h(url('dalia/assign')) ?>" class="bg-surface rounded-card overflow-hidden">
       <?= csrf_field() ?>
       <input type="hidden" name="id" value="<?= (int)$t['id'] ?>">
-      <h3 class="font-bold text-slate-800 mb-3">Asignar / actualizar</h3>
-      <label class="block text-sm font-medium text-slate-700 mb-1">Técnico</label>
-      <select name="tecnico" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white mb-3">
-        <option value="">— Sin cambio —</option>
-        <?php foreach ($tecnicos as $tc): ?>
-          <option value="<?= (int)$tc['id'] ?>"><?= h($tc['display'] ?: $tc['name']) ?></option>
-        <?php endforeach; ?>
-      </select>
-      <label class="block text-sm font-medium text-slate-700 mb-1">Urgencia</label>
-      <select name="urgency" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white mb-3">
-        <?php foreach (URGENCY as $v => $l): ?>
-          <option value="<?= $v ?>" <?= (int)$t['urgency'] === $v ? 'selected' : '' ?>><?= h($l) ?></option>
-        <?php endforeach; ?>
-      </select>
-      <label class="block text-sm font-medium text-slate-700 mb-1">Fecha de atención <span class="text-slate-400 font-normal">(opcional — va al calendario)</span></label>
-      <input type="date" name="fecha" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm mb-4">
-      <button class="w-full bg-brand hover:bg-brand-dark text-white font-semibold rounded-lg py-2.5">Guardar y notificar</button>
-      <?php if ($t['tecnico_name']): ?>
-        <p class="text-xs text-slate-500 mt-2">Asignado actualmente a: <span class="font-medium"><?= h($t['tecnico_name']) ?></span></p>
-      <?php endif; ?>
+      <div class="bg-brand text-white px-4 py-3"><h3 class="font-extrabold text-[14px]">Asignar / actualizar</h3></div>
+      <div class="p-4 space-y-3.5">
+        <div>
+          <label class="block text-[11px] font-bold uppercase tracking-wide text-muted mb-1.5">Técnico</label>
+          <select name="tecnico" class="fld w-full">
+            <option value="">— Sin cambio —</option>
+            <?php foreach ($tecnicos as $tc): ?>
+              <option value="<?= (int)$tc['id'] ?>"><?= h($tc['display'] ?: $tc['name']) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold uppercase tracking-wide text-muted mb-1.5">Urgencia</label>
+          <select name="urgency" class="fld w-full">
+            <?php foreach (URGENCY as $v => $l): ?>
+              <option value="<?= $v ?>" <?= (int)$t['urgency'] === $v ? 'selected' : '' ?>><?= h($l) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold uppercase tracking-wide text-muted mb-1.5">Fecha de atención <span class="text-faint font-medium normal-case">(va al calendario)</span></label>
+          <input type="date" name="fecha" class="fld w-full">
+        </div>
+        <button class="tap w-full bg-brand hover:bg-brand-dark text-white font-extrabold text-[14px] rounded-xl py-3 mt-1 transition-colors">Guardar y notificar</button>
+        <?php if ($t['tecnico_name']): ?>
+          <p class="text-[12px] text-muted">Asignado actualmente a <span class="font-bold text-ink"><?= h($t['tecnico_name']) ?></span>.</p>
+        <?php endif; ?>
+      </div>
     </form>
 
     <?php partial('linked_assets', ['assets' => $assets]); ?>
 
-    <div class="bg-white rounded-xl border border-slate-200 p-4 text-sm">
-      <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Detalles</h3>
-      <dl class="space-y-1 text-slate-600">
-        <div class="flex justify-between"><dt>Abierto</dt><dd><?= fecha($t['date']) ?></dd></div>
+    <div class="bg-surface rounded-card p-4">
+      <div class="text-[10.5px] font-bold uppercase tracking-wide text-faint mb-2.5">Detalles</div>
+      <dl class="space-y-2 text-[13px]">
+        <div class="flex justify-between"><dt class="text-muted">Abierto</dt><dd class="font-semibold"><?= fecha($t['date']) ?></dd></div>
         <?php if (!empty($t['closedate']) && $t['closedate'] !== '0000-00-00 00:00:00'): ?>
-          <div class="flex justify-between"><dt>Cerrado</dt><dd><?= fecha($t['closedate']) ?></dd></div>
+          <div class="flex justify-between"><dt class="text-muted">Cerrado</dt><dd class="font-semibold"><?= fecha($t['closedate']) ?></dd></div>
         <?php endif; ?>
       </dl>
     </div>
