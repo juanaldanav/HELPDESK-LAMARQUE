@@ -21,8 +21,9 @@
     <div class="text-[30px] font-extrabold mt-1.5 leading-none" style="color:var(--st-resuelto)"><?= (int)$kpi['completados'] ?> · <?= (int)$kpi['pct_completados'] ?>%</div>
   </div>
   <div class="bg-surface rounded-card p-5">
-    <div class="text-[11px] font-bold uppercase tracking-wide text-muted">Pendientes</div>
-    <div class="text-[30px] font-extrabold mt-1.5 leading-none" style="color:var(--st-curso)"><?= (int)$kpi['pendientes'] ?></div>
+    <div class="text-[11px] font-bold uppercase tracking-wide text-muted">Pendientes (hoy)</div>
+    <div class="text-[30px] font-extrabold mt-1.5 leading-none" style="color:var(--st-curso)"><?= (int)$kpi['pendientes_hoy'] ?></div>
+    <div class="text-[11px] text-faint mt-1">abiertos de cualquier mes</div>
   </div>
   <div class="bg-surface rounded-card p-5">
     <div class="text-[11px] font-bold uppercase tracking-wide text-muted">Correctivo / Preventivo</div>

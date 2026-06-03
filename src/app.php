@@ -107,6 +107,9 @@ function dashboard_kpis(string $period): array
     foreach (q_all("SELECT status, COUNT(*) c $base GROUP BY status", $p) as $r) $byStatus[(int)$r['status']] = (int)$r['c'];
     $completados = ($byStatus[5] ?? 0) + ($byStatus[6] ?? 0);
     $pendientes  = ($byStatus[1] ?? 0) + ($byStatus[2] ?? 0) + ($byStatus[3] ?? 0) + ($byStatus[4] ?? 0);
+    // Pendientes REALES al día de hoy: abiertos sin importar el mes de apertura
+    // (un ticket de mayo aún abierto en junio sigue pendiente). Aprovecha todo glpidb.
+    $pendientes_hoy = (int) q_val("SELECT COUNT(*) FROM glpi_tickets WHERE is_deleted = 0 AND status IN (1,2,3,4)");
 
     // Correctivo (raíz 2) vs Preventivo (raíz 1)
     $roots = [];
@@ -144,6 +147,7 @@ function dashboard_kpis(string $period): array
         'completados'  => $completados,
         'pendientes'   => $pendientes,
         'pct_completados' => $total ? round($completados * 100 / $total) : 0,
+        'pendientes_hoy' => $pendientes_hoy,
         'preventivo'   => $roots[1] ?? 0,
         'correctivo'   => $roots[2] ?? 0,
         'top_sucursales' => $topSuc,

@@ -45,10 +45,13 @@ tailwind.config = { theme: { extend: {
   .peer:checked ~ .sw{ background:var(--brand); }
   .peer:checked ~ .sw::after{ transform:translateX(18px); }
   .peer:focus-visible ~ .sw{ outline:2px solid var(--brand); outline-offset:2px; }
-  /* campos planos de la familia de acceso/forms */
-  .fld{ width:100%; background:var(--canvas); border-radius:14px; padding:13px 16px; font-size:15px; outline:none; transition:box-shadow .15s ease, background .15s ease; }
+  /* campos de la familia de acceso/forms — con contorno sutil del color de marca */
+  .fld{ width:100%; background:var(--canvas); border:1px solid rgba(0,105,112,.18); border-radius:14px; padding:13px 16px; font-size:15px; outline:none; transition:box-shadow .15s ease, background .15s ease, border-color .15s ease; }
   .fld::placeholder{ color:#90a0a0; }
-  .fld:focus{ background:#fff; box-shadow:0 0 0 2px var(--brand); }
+  .fld:focus{ background:#fff; border-color:var(--brand); box-shadow:0 0 0 2px var(--brand); }
+  /* Contorno delgado del color del header para delimitar cada espacio (pedido del cliente) */
+  .bg-surface{ border:1px solid rgba(0,105,112,.16); }
+  .bg-brand-tint.rounded-card{ border:1px solid rgba(0,105,112,.22); }
 </style>
 </head>
 <body class="h-full bg-canvas font-sans text-ink antialiased">
