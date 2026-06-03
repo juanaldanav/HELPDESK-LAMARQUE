@@ -4,7 +4,7 @@ $nCurso = count(array_filter($list, fn($t) => in_array((int)$t['status'], [2, 3]
 $nTotal = count($list);
 $nUrg = count(array_filter($list, fn($t) => (int)$t['urgency'] <= 2));
 ?>
-<div class="max-w-md md:max-w-2xl mx-auto" x-data="{ active:0, show(st){ if(this.active===1) return st==='curso'; return true; } }">
+<div class="max-w-md md:max-w-2xl lg:max-w-5xl mx-auto" x-data="{ active:0, show(st){ if(this.active===1) return st==='curso'; return true; } }">
 
   <div class="mb-4">
     <h1 class="text-[26px] font-extrabold tracking-tight leading-tight">Mis tareas</h1>
@@ -15,7 +15,7 @@ $nUrg = count(array_filter($list, fn($t) => (int)$t['urgency'] <= 2));
   </div>
 
   <!-- Filtro segmentado -->
-  <div class="relative bg-brand-tint rounded-2xl p-1 flex mb-5 select-none">
+  <div class="relative bg-brand-tint rounded-2xl p-1 flex mb-5 select-none max-w-md">
     <button @click="active=0" class="relative z-10 flex-1 h-9 text-[13px] font-bold rounded-xl flex items-center justify-center gap-1.5 transition-colors duration-200" :class="active===0 ? 'text-white' : 'text-brand-dark/65'">
       <span>Pendientes</span>
       <span class="text-[11px] font-bold px-1.5 rounded-full" :class="active===0 ? 'bg-white/20 text-white' : 'bg-brand/10 text-brand-dark/70'"><?= $nTotal ?></span>
@@ -33,7 +33,7 @@ $nUrg = count(array_filter($list, fn($t) => (int)$t['urgency'] <= 2));
       <p class="text-muted font-semibold">No tienes tareas pendientes.</p>
     </div>
   <?php else: ?>
-    <div class="space-y-2.5 stagger">
+    <div class="grid gap-2.5 lg:grid-cols-2 stagger">
       <?php foreach ($list as $t): $sk = $stkey((int)$t['status']); ?>
         <a href="<?= h(url('tec/detail', ['id' => $t['id']])) ?>" class="tap block bg-surface rounded-card overflow-hidden"
            data-st="<?= $sk ?>" x-show="show('<?= $sk ?>')" x-transition.opacity.duration.200ms>

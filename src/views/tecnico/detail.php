@@ -1,6 +1,6 @@
 <?php /** @var array $t @var array $thread @var array $assets @var bool $ok */
 $open = is_open_status((int)$t['status']); ?>
-<div class="max-w-md md:max-w-2xl mx-auto <?= $open ? 'pb-24' : '' ?>" x-data="{ sheet:false }">
+<div class="max-w-md md:max-w-3xl lg:max-w-5xl mx-auto <?= $open ? 'pb-24 lg:pb-0' : '' ?>" x-data="{ sheet:false }">
 
   <a href="<?= h(url('tec/home')) ?>" class="tap inline-flex items-center gap-1 text-[14px] font-semibold text-muted -ml-1 px-1 py-1 rounded-xl">
     <?= svg_icon('back', 20) ?> Mis tareas
@@ -30,37 +30,61 @@ $open = is_open_status((int)$t['status']); ?>
     </div>
   </div>
 
-  <!-- Activo vinculado -->
-  <div class="mt-5"><?php partial('linked_assets', ['assets' => $assets]); ?></div>
+  <!-- Desktop: 2 columnas (actividad | sidebar). Móvil: una sola, sidebar arriba. -->
+  <div class="lg:grid lg:grid-cols-3 lg:gap-6 lg:items-start mt-5">
 
-  <!-- Actividad -->
-  <div class="mt-6 mb-2 flex items-center gap-2">
-    <h2 class="text-[12px] font-bold uppercase tracking-wide text-muted">Actividad</h2>
-    <span class="h-px flex-1 bg-ink/5"></span>
+    <!-- Sidebar (en móvil va primero; en desktop a la derecha) -->
+    <div class="space-y-4 lg:order-2 lg:sticky lg:top-20">
+      <?php partial('linked_assets', ['assets' => $assets]); ?>
+      <div class="bg-surface rounded-card p-4 text-[13px]">
+        <div class="text-[10.5px] font-bold uppercase tracking-wide text-faint mb-2">Detalles</div>
+        <div class="flex justify-between text-muted"><span>Abierto</span><span class="font-semibold text-ink"><?= fecha($t['date']) ?></span></div>
+        <?php if (!empty($t['closedate']) && $t['closedate'] !== '0000-00-00 00:00:00'): ?>
+          <div class="flex justify-between text-muted mt-1"><span>Cerrado</span><span class="font-semibold text-ink"><?= fecha($t['closedate']) ?></span></div>
+        <?php endif; ?>
+      </div>
+      <?php if ($open): ?>
+        <!-- CTA desktop (la barra fija es solo móvil) -->
+        <button @click="sheet=true" type="button"
+          class="tap hidden lg:flex w-full bg-brand active:bg-brand-dark hover:bg-brand-dark text-white font-extrabold text-[15px] rounded-2xl py-4 items-center justify-center gap-2 transition-colors">
+          <?= svg_icon('check', 20) ?> Cerrar con hoja de servicio
+        </button>
+      <?php endif; ?>
+    </div>
+
+    <!-- Columna principal: actividad -->
+    <div class="lg:col-span-2 lg:order-1 mt-5 lg:mt-0">
+      <div class="mb-2 flex items-center gap-2">
+        <h2 class="text-[12px] font-bold uppercase tracking-wide text-muted">Actividad</h2>
+        <span class="h-px flex-1 bg-ink/5"></span>
+      </div>
+
+      <?php partial('timeline', ['thread' => $thread]); ?>
+
+      <?php if ($open): ?>
+        <!-- Compositor · tec/comment -->
+        <form method="post" action="<?= h(url('tec/comment')) ?>" enctype="multipart/form-data" class="mt-5 bg-surface rounded-card p-3" x-data="{txt:'', foto:false}">
+          <?= csrf_field() ?>
+          <input type="hidden" name="id" value="<?= (int)$t['id'] ?>">
+          <textarea name="content" x-model="txt" rows="2" placeholder="Escribe una actualización…"
+            class="w-full resize-none bg-transparent text-[14px] placeholder:text-faint outline-none px-1 pt-1"></textarea>
+          <div class="flex items-center justify-between mt-1">
+            <label class="tap cursor-pointer inline-flex items-center gap-1.5 text-[12.5px] font-semibold px-2 py-1.5 rounded-lg active:bg-canvas" :class="foto ? 'text-brand-dark' : 'text-muted'">
+              <?= svg_icon('camera', 18) ?>
+              <span x-text="foto ? 'Foto lista' : 'Foto'"></span>
+              <input type="file" name="photo" accept="image/*" capture="environment" class="hidden" @change="foto = $event.target.files.length > 0">
+            </label>
+            <button type="submit" class="tap text-[13px] font-bold rounded-xl px-4 py-2 transition-colors"
+                    :class="(txt.trim() || foto) ? 'bg-brand text-white' : 'bg-canvas text-faint'">Comentar</button>
+          </div>
+        </form>
+      <?php endif; ?>
+    </div>
   </div>
 
-  <?php partial('timeline', ['thread' => $thread]); ?>
-
   <?php if ($open): ?>
-    <!-- Compositor · tec/comment -->
-    <form method="post" action="<?= h(url('tec/comment')) ?>" enctype="multipart/form-data" class="mt-5 bg-surface rounded-card p-3" x-data="{txt:'', foto:false}">
-      <?= csrf_field() ?>
-      <input type="hidden" name="id" value="<?= (int)$t['id'] ?>">
-      <textarea name="content" x-model="txt" rows="2" placeholder="Escribe una actualización…"
-        class="w-full resize-none bg-transparent text-[14px] placeholder:text-faint outline-none px-1 pt-1"></textarea>
-      <div class="flex items-center justify-between mt-1">
-        <label class="tap cursor-pointer inline-flex items-center gap-1.5 text-[12.5px] font-semibold px-2 py-1.5 rounded-lg active:bg-canvas" :class="foto ? 'text-brand-dark' : 'text-muted'">
-          <?= svg_icon('camera', 18) ?>
-          <span x-text="foto ? 'Foto lista' : 'Foto'"></span>
-          <input type="file" name="photo" accept="image/*" capture="environment" class="hidden" @change="foto = $event.target.files.length > 0">
-        </label>
-        <button type="submit" class="tap text-[13px] font-bold rounded-xl px-4 py-2 transition-colors"
-                :class="(txt.trim() || foto) ? 'bg-brand text-white' : 'bg-canvas text-faint'">Comentar</button>
-      </div>
-    </form>
-
-    <!-- Barra fija: abrir hoja de servicio -->
-    <div class="fixed left-0 right-0 bottom-0 z-20 px-4 pt-3 pb-5 bg-gradient-to-t from-canvas via-canvas to-transparent">
+    <!-- Barra fija: abrir hoja de servicio (solo móvil) -->
+    <div class="lg:hidden fixed left-0 right-0 bottom-0 z-20 px-4 pt-3 pb-5 bg-gradient-to-t from-canvas via-canvas to-transparent">
       <div class="max-w-md mx-auto">
         <button @click="sheet=true" type="button"
           class="tap w-full bg-brand active:bg-brand-dark text-white font-extrabold text-[15px] rounded-2xl py-4 flex items-center justify-center gap-2">
