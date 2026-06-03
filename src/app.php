@@ -59,12 +59,30 @@ function notify_new_ticket(int $ticketId, array $requester): void
         "<p>Hola " . h($requester['entity_name']) . ",</p><p>Tu reporte <b>#$ticketId</b> fue recibido. Te avisaremos cuando un técnico lo atienda.</p><p>— Soporte Lamarque</p>");
 }
 
-function notify_assigned(int $ticketId, int $tecnicoId): void
+function notify_assigned(int $ticketId, int $tecnicoId, ?string $fecha = null): void
 {
     $t = q_one("SELECT name, entities_id FROM glpi_tickets WHERE id = :id", [':id' => $ticketId]);
     $to = user_email($tecnicoId);
+    $extra = $fecha ? "<p>Fecha de atención programada: <b>" . h($fecha) . "</b></p>" : "";
     send_mail($to, "Nuevo ticket asignado #$ticketId",
-        "<p>Se te asignó el ticket <b>#$ticketId</b>: " . h($t['name'] ?? '') . "</p><p>Sucursal: " . h(Users::entityName((int)($t['entities_id'] ?? 0))) . "</p><p>Entra al portal para atenderlo.</p>");
+        "<p>Se te asignó el ticket <b>#$ticketId</b>: " . h($t['name'] ?? '') . "</p><p>Sucursal: " . h(Users::entityName((int)($t['entities_id'] ?? 0))) . "</p>" . $extra . "<p>Entra al portal para atenderlo.</p>");
+}
+
+// Notifica un mantenimiento agendado (técnico + sucursal). Best-effort.
+function notify_agendado(int $agendaId): void
+{
+    $a = Agenda::get($agendaId);
+    if (!$a) return;
+    $suc = Users::entityName((int)$a['entities_id']);
+    $rango = $a['fecha'] . ($a['fecha_fin'] ? ' a ' . $a['fecha_fin'] : '');
+    $body = "<p>Mantenimiento <b>" . h($a['tipo']) . "</b> programado.</p>"
+        . "<p>Sucursal: <b>" . h($suc) . "</b><br>Fecha: <b>" . h($rango) . "</b></p>"
+        . ($a['descripcion'] ? "<p>" . h($a['descripcion']) . "</p>" : "")
+        . "<p>— Soporte Lamarque</p>";
+    if (!empty($a['users_id_tecnico'])) {
+        send_mail(user_email((int)$a['users_id_tecnico']), "Mantenimiento programado: " . $a['tipo'] . " — $suc", $body);
+    }
+    send_mail(entity_email((int)$a['entities_id']), "Mantenimiento programado en tu sucursal: " . $a['tipo'], $body);
 }
 
 function notify_closed(int $ticketId): void
@@ -109,6 +127,15 @@ function dashboard_kpis(string $period): array
          WHERE t.is_deleted = 0 AND DATE_FORMAT(t.date,'%Y-%m') = :per
          GROUP BY t.itilcategories_id ORDER BY c DESC LIMIT 5", $p);
 
+    // Atenciones por proveedor: sin link a proveedor = atendido Interno (requisito junta, sin costos)
+    $topProv = q_all(
+        "SELECT COALESCE(s.name, 'Interno') AS label, COUNT(DISTINCT t.id) AS c
+         FROM glpi_tickets t
+         LEFT JOIN glpi_suppliers_tickets st ON st.tickets_id = t.id
+         LEFT JOIN glpi_suppliers s ON s.id = st.suppliers_id
+         WHERE t.is_deleted = 0 AND DATE_FORMAT(t.date,'%Y-%m') = :per
+         GROUP BY s.id ORDER BY c DESC LIMIT 8", $p);
+
     return [
         'total'        => $total,
         'completados'  => $completados,
@@ -118,6 +145,7 @@ function dashboard_kpis(string $period): array
         'correctivo'   => $roots[2] ?? 0,
         'top_sucursales' => $topSuc,
         'top_categorias' => $topCat,
+        'top_proveedores' => $topProv,
     ];
 }
 

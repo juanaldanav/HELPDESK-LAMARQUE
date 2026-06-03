@@ -45,8 +45,21 @@
 
 ---
 
+## RF-D5 — Calendario de mantenimientos (IMPLEMENTADO 2026-06-03)
+- Vista mensual (`?r=dalia/calendar`): eventos por sucursal/tipo con colores, filtros, navegación de mes, leyenda.
+- Crear evento preventivo (sucursal+tipo+fecha/rango+técnico+notas) → notifica técnico y sucursal por correo.
+- Marcar realizado / reabrir / cancelar. Eventos de rango se pintan en cada día.
+- Correctivos: al asignar técnico con "Fecha de atención" se crea evento `Correctivo` ligado al ticket.
+- Datos: tabla `lmq_agenda` (ver schema.md), sembrada con 74 eventos del Cronograma 2026.
+
+## RF-D1 ampliado (2026-06-03)
+- Gráfica "Atenciones por proveedor (interno vs externos)" — sin costos (requisito junta). Backfill de proveedores históricos desde CSV.
+
+## RF-S3 ampliado (2026-06-03)
+- Hasta **5 fotos** al crear ticket (paridad con el Google Form que se reemplaza). Categoría `Infra - Limpieza` agregada.
+
 ## Fuera de alcance del MVP (fase 2)
-- Calendario preventivo (D5), service worker offline real, dashboard drag-drop, gestión de consumibles por lote, baja de activos desde la UI, edición de catálogos.
+- Service worker offline real, dashboard drag-drop, gestión de consumibles por lote, edición de catálogos.
 
 ## Criterios de aceptación de la demo
 1. `guadalupe` entra, ve solo GDL, crea ticket con activo `LMQ-GDL-REF-0005` + foto.

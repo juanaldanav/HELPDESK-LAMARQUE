@@ -25,6 +25,26 @@ function save_photo(?array $file, int $ticketId): ?string
     return $rel;
 }
 
+// Hasta $max fotos de un input multiple (photos[]). Devuelve rutas relativas guardadas.
+function save_photos(?array $files, int $ticketId, int $max = 5): array
+{
+    if (!$files || !isset($files['name']) || !is_array($files['name'])) return [];
+    $out = [];
+    $n = min(count($files['name']), $max);
+    for ($i = 0; $i < $n; $i++) {
+        $one = [
+            'name'     => $files['name'][$i] ?? '',
+            'type'     => $files['type'][$i] ?? '',
+            'tmp_name' => $files['tmp_name'][$i] ?? '',
+            'error'    => $files['error'][$i] ?? UPLOAD_ERR_NO_FILE,
+            'size'     => $files['size'][$i] ?? 0,
+        ];
+        $rel = save_photo($one, $ticketId);
+        if ($rel) $out[] = $rel;
+    }
+    return $out;
+}
+
 function serve_image(string $rel): void
 {
     // valida ruta: <ticketId>/<archivo> — sin traversal
@@ -158,10 +178,12 @@ try {
                 'asset_itemtype' => $asset_itemtype ?: null,
                 'asset_id'       => $asset_id ?: null,
             ]);
-            // foto inicial -> followup del solicitante
-            $rel = save_photo($_FILES['photo'] ?? null, $id);
-            if ($rel) {
-                Followups::add($id, $u['id'], "Foto del reporte\n[foto:$rel]", 0, 1);
+            // fotos iniciales (hasta 5) -> followup del solicitante
+            $rels = save_photos($_FILES['photos'] ?? null, $id);
+            if ($rels) {
+                $msg = count($rels) === 1 ? 'Foto del reporte' : 'Fotos del reporte';
+                foreach ($rels as $rel) $msg .= "\n[foto:$rel]";
+                Followups::add($id, $u['id'], $msg, 0, 1);
             }
             notify_new_ticket($id, $u);
             redirect('ticket/view', ['id' => $id, 'ok' => 1]);
@@ -271,14 +293,83 @@ try {
             csrf_check();
             $id = (int)($_POST['id'] ?? 0);
             $tec = (int)($_POST['tecnico'] ?? 0);
-            if (isset($_POST['urgency'])) Tickets::setUrgency($id, (int)$_POST['urgency']);
-            if ($tec) { Tickets::assign($id, $tec); notify_assigned($id, $tec); }
+            $urg = (int)($_POST['urgency'] ?? 0);
+            if ($urg >= 1 && $urg <= 5) Tickets::setUrgency($id, $urg);
+            $fechaAt = $_POST['fecha'] ?? '';
+            if (!preg_match('~^\d{4}-\d{2}-\d{2}$~', $fechaAt)) $fechaAt = '';
+            if ($tec) {
+                Tickets::assign($id, $tec);
+                notify_assigned($id, $tec, $fechaAt ?: null);
+                // Fecha de atención -> evento correctivo en el calendario
+                if ($fechaAt) {
+                    $tk = q_one("SELECT name, entities_id FROM glpi_tickets WHERE id = :id", [':id' => $id]);
+                    if ($tk) {
+                        Agenda::create([
+                            'entity_id'   => (int)$tk['entities_id'],
+                            'tipo'        => 'Correctivo',
+                            'clase'       => 'correctivo',
+                            'fecha'       => $fechaAt,
+                            'tecnico_id'  => $tec,
+                            'tickets_id'  => $id,
+                            'descripcion' => mb_substr('Ticket #' . $id . ' — ' . $tk['name'], 0, 400),
+                            'creator_id'  => $u['id'],
+                        ]);
+                    }
+                }
+            }
             redirect('dalia/view', ['id' => $id, 'ok' => 1]);
             break;
 
         case 'dalia/export':
             $u = require_role(['dalia']);
             export_tickets_csv($_GET);
+            break;
+
+        case 'dalia/calendar':
+            $u = require_role(['dalia']);
+            $ym = $_GET['ym'] ?? date('Y-m');
+            if (!preg_match('~^\d{4}-(0[1-9]|1[0-2])$~', $ym)) $ym = date('Y-m');
+            [$y, $m] = array_map('intval', explode('-', $ym));
+            $fil = [
+                'entity' => (int)($_GET['entity'] ?? 0) ?: null,
+                'tipo'   => in_array($_GET['tipo'] ?? '', Agenda::TIPOS, true) ? $_GET['tipo'] : null,
+            ];
+            render('dalia/calendar', [
+                'title' => 'Calendario', 'y' => $y, 'm' => $m, 'ym' => $ym,
+                'events' => Agenda::month($y, $m, array_filter($fil)),
+                'fil' => $fil, 'sucursales' => Users::sucursales(), 'tecnicos' => Users::tecnicos(),
+                'ok' => !empty($_GET['ok']),
+            ]);
+            break;
+
+        case 'dalia/agenda/create':
+            $u = require_role(['dalia']);
+            csrf_check();
+            $fecha = $_POST['fecha'] ?? '';
+            $ffin  = $_POST['fecha_fin'] ?? '';
+            if (!preg_match('~^\d{4}-\d{2}-\d{2}$~', $fecha)) redirect('dalia/calendar');
+            if ($ffin !== '' && (!preg_match('~^\d{4}-\d{2}-\d{2}$~', $ffin) || $ffin < $fecha)) $ffin = '';
+            $aid = Agenda::create([
+                'entity_id'   => (int)($_POST['entity'] ?? 0),
+                'tipo'        => $_POST['tipo'] ?? 'Otro',
+                'clase'       => 'preventivo',
+                'fecha'       => $fecha,
+                'fecha_fin'   => $ffin ?: null,
+                'tecnico_id'  => (int)($_POST['tecnico'] ?? 0),
+                'descripcion' => mb_substr(trim($_POST['descripcion'] ?? ''), 0, 400),
+                'creator_id'  => $u['id'],
+            ]);
+            notify_agendado($aid);
+            redirect('dalia/calendar', ['ym' => substr($fecha, 0, 7), 'ok' => 1]);
+            break;
+
+        case 'dalia/agenda/estado':
+            $u = require_role(['dalia']);
+            csrf_check();
+            Agenda::setEstado((int)($_POST['id'] ?? 0), $_POST['estado'] ?? '');
+            $ymBack = $_POST['ym'] ?? date('Y-m');
+            if (!preg_match('~^\d{4}-\d{2}$~', $ymBack)) $ymBack = date('Y-m');
+            redirect('dalia/calendar', ['ym' => $ymBack]);
             break;
 
         case 'dalia/assets':

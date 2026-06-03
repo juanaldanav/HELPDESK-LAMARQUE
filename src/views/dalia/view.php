@@ -34,11 +34,13 @@
         <?php endforeach; ?>
       </select>
       <label class="block text-sm font-medium text-slate-700 mb-1">Urgencia</label>
-      <select name="urgency" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white mb-4">
+      <select name="urgency" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white mb-3">
         <?php foreach (URGENCY as $v => $l): ?>
           <option value="<?= $v ?>" <?= (int)$t['urgency'] === $v ? 'selected' : '' ?>><?= h($l) ?></option>
         <?php endforeach; ?>
       </select>
+      <label class="block text-sm font-medium text-slate-700 mb-1">Fecha de atención <span class="text-slate-400 font-normal">(opcional — va al calendario)</span></label>
+      <input type="date" name="fecha" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm mb-4">
       <button class="w-full bg-brand hover:bg-brand-dark text-white font-semibold rounded-lg py-2.5">Guardar y notificar</button>
       <?php if ($t['tecnico_name']): ?>
         <p class="text-xs text-slate-500 mt-2">Asignado actualmente a: <span class="font-medium"><?= h($t['tecnico_name']) ?></span></p>

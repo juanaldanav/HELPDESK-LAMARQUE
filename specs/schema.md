@@ -76,6 +76,17 @@ Mapa tipo (`glpi_plugin_genericobject_types`):
 ## Estados de activo — `glpi_states`
 1=Activo, 2=En Reparación, 3=Baja, 4=En Bodega, 5=Pendiente.
 
+## Agenda de mantenimientos — `lmq_agenda` (tabla propia, creada 2026-06-02)
+- `id, entities_id, tipo (varchar80), clase enum(preventivo|correctivo), fecha date, fecha_fin date null, users_id_tecnico null, tickets_id null (link a glpi_tickets si es correctivo), descripcion, estado enum(programado|realizado|cancelado), users_id_creator, date_creation`
+- Sembrada con 74 eventos del `Cronograma_Mantenimientos_2026.xlsx` (script `seed_agenda.py`). Tipos: Filtro de Agua, Maquina de Hielo, Refrigeradores y Vitrinas, Minisplit A/C, Café Marino (+Correctivo/Otro).
+
+## Proveedores — `glpi_suppliers` + `glpi_suppliers_tickets` (backfill 2026-06-02)
+- 72 proveedores externos + 281 links creados desde `GLPI_Tickets_Import.csv` (script `backfill_suppliers.py`, match por `glpi_tickets.name` = título único). Valores "Interno*" NO se vinculan → cuentan como 'Interno' vía `COALESCE(s.name,'Interno')`.
+- `glpi_suppliers_tickets`: tickets_id, suppliers_id, type=2.
+
+## Categorías — nota
+- id 32 `Infra - Limpieza` agregada 2026-06-03 (hija de 4, requerida por el Google Form que se reemplaza).
+
 ## Fotos / documentos — `glpi_documents` + `glpi_documents_items`
 - `glpi_documents`: archivo subido (filepath, filename, mime). `glpi_documents_items`: polimórfico (`documents_id, items_id, itemtype, entities_id, timeline_position`).
 - Para MVP la subida de foto puede guardarse en `/var/lib/glpi/files/...` siguiendo el patrón GLPI, o simplificarse a carpeta propia `uploads/` referenciada en el followup. Decisión en plan.md.

@@ -71,8 +71,8 @@
   </div>
 
   <div>
-    <label class="block text-sm font-medium text-slate-700 mb-1">Foto <span class="text-slate-400 font-normal">(opcional)</span></label>
-    <input type="file" name="photo" accept="image/*" capture="environment"
+    <label class="block text-sm font-medium text-slate-700 mb-1">Fotos <span class="text-slate-400 font-normal">(opcional, hasta 5)</span></label>
+    <input type="file" name="photos[]" accept="image/*" capture="environment" multiple
            class="w-full text-sm text-slate-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-brand-light file:text-brand-dark file:font-medium">
   </div>
 

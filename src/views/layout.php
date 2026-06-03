@@ -36,6 +36,7 @@ tailwind.config = { theme: { extend: {
       <?php elseif ($u['role'] === 'dalia'): ?>
         <a href="<?= h(url('dalia/dashboard')) ?>" class="px-3 py-1.5 rounded-lg hover:bg-white/10">Dashboard</a>
         <a href="<?= h(url('dalia/tickets')) ?>" class="px-3 py-1.5 rounded-lg hover:bg-white/10">Tickets</a>
+        <a href="<?= h(url('dalia/calendar')) ?>" class="px-3 py-1.5 rounded-lg hover:bg-white/10">Calendario</a>
         <a href="<?= h(url('dalia/assets')) ?>" class="px-3 py-1.5 rounded-lg hover:bg-white/10">Activos</a>
       <?php endif; ?>
       <span class="hidden sm:inline px-3 text-white/70 text-xs"><?= h($u['display']) ?><?= $u['role']==='sucursal' ? ' · '.h($u['entity_name']) : '' ?></span>

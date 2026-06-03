@@ -44,6 +44,12 @@
       <p class="text-slate-400 text-sm">Sin datos en el periodo.</p>
     <?php else: ?><canvas id="chCat" height="90"></canvas><?php endif; ?>
   </div>
+  <div class="bg-white rounded-2xl border border-slate-200 p-5 lg:col-span-3">
+    <h2 class="font-bold text-slate-800 mb-3">Atenciones por proveedor <span class="text-sm font-normal text-slate-400">(interno vs externos)</span></h2>
+    <?php if (empty($kpi['top_proveedores'])): ?>
+      <p class="text-slate-400 text-sm">Sin datos en el periodo.</p>
+    <?php else: ?><canvas id="chProv" height="90"></canvas><?php endif; ?>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
@@ -64,6 +70,9 @@ bar('chSuc',
 bar('chCat',
   <?= json_encode(array_column($kpi['top_categorias'], 'label')) ?>,
   <?= json_encode(array_map('intval', array_column($kpi['top_categorias'], 'c'))) ?>, false);
+bar('chProv',
+  <?= json_encode(array_column($kpi['top_proveedores'], 'label')) ?>,
+  <?= json_encode(array_map('intval', array_column($kpi['top_proveedores'], 'c'))) ?>, false);
 (function(){
   const el = document.getElementById('chCP'); if (!el) return;
   new Chart(el, { type: 'doughnut',
