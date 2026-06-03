@@ -12,6 +12,8 @@ uploads/
 
 # Evidencia QA (capturas con datos reales)
 specs/evidencia/
+# Entregables generados (docx con capturas de datos reales)
+entregables/
 
 # Sistema
 .DS_Store
