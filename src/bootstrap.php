@@ -26,6 +26,7 @@ require __DIR__ . '/repo/Followups.php';
 require __DIR__ . '/repo/Assets.php';
 require __DIR__ . '/repo/PasswordReset.php';
 require __DIR__ . '/repo/Agenda.php';
+require __DIR__ . '/repo/Suppliers.php';
 require __DIR__ . '/app.php';
 
 if (session_status() !== PHP_SESSION_ACTIVE) {

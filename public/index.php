@@ -308,7 +308,27 @@ try {
             if (!$t) { deny('Este ticket no está disponible para tu cuenta.', 404); }
             $thread = Followups::thread($t);
             $assets = linked_assets_full($t['id']);
-            render('dalia/view', ['title' => 'Ticket #' . $t['id'], 't' => $t, 'thread' => $thread, 'assets' => $assets, 'tecnicos' => Users::tecnicos(), 'ok' => !empty($_GET['ok'])]);
+            render('dalia/view', ['title' => 'Ticket #' . $t['id'], 't' => $t, 'thread' => $thread, 'assets' => $assets,
+                'tecnicos' => Users::tecnicos(), 'proveedores' => Suppliers::all(), 'proveedor' => Suppliers::ofTicket((int)$t['id']),
+                'ok' => !empty($_GET['ok'])]);
+            break;
+
+        case 'dalia/close':
+            $u = require_role(['dalia']);
+            csrf_check();
+            $id = (int)($_POST['id'] ?? 0);
+            $t = Tickets::get($id);
+            if (!$t) { deny('Ticket no encontrado.', 404); }
+            $nota = trim($_POST['nota'] ?? '');
+            Followups::add($id, (int)$u['id'], $nota !== '' ? "Cierre (coordinación): " . $nota : "Ticket cerrado por coordinación.", 0, 1);
+            Tickets::close($id);
+            $pdfPath = null;
+            try {
+                $tFull = Tickets::get($id);
+                if ($tFull) $pdfPath = service_sheet_pdf($tFull, Followups::thread($tFull), linked_assets_full($id));
+            } catch (Throwable $e) { error_log('[soporte-v2 pdf] ' . $e->getMessage()); }
+            notify_closed($id, $pdfPath);
+            redirect('dalia/view', ['id' => $id, 'ok' => 1]);
             break;
 
         case 'dalia/comment':
@@ -333,6 +353,20 @@ try {
             if ($urg >= 1 && $urg <= 5) Tickets::setUrgency($id, $urg);
             $fechaAt = $_POST['fecha'] ?? '';
             if (!preg_match('~^\d{4}-\d{2}-\d{2}$~', $fechaAt)) $fechaAt = '';
+            // Proveedor externo: seleccionar existente o crear uno nuevo
+            $provId = (int)($_POST['proveedor'] ?? 0);
+            $provNuevo = trim($_POST['proveedor_nuevo'] ?? '');
+            if ($provNuevo !== '') $provId = Suppliers::findOrCreate($provNuevo, trim($_POST['proveedor_email'] ?? ''));
+            if ($provId) {
+                Suppliers::assign($id, $provId);
+                $sup = Suppliers::get($provId);
+                db()->prepare("UPDATE glpi_tickets SET status = IF(status = 1, 2, status), date_mod = NOW() WHERE id = :t")->execute([':t' => $id]);
+                Followups::add($id, (int)$u['id'], "Derivado a proveedor externo: " . ($sup['name'] ?? ''), 0, 1);
+                if (!empty($sup['email'])) {
+                    send_mail($sup['email'], "Servicio asignado — Ticket #$id",
+                        "<p>Se le asignó la atención del ticket <b>#$id</b>" . ($fechaAt ? " para el <b>" . h($fechaAt) . "</b>" : "") . ".</p>");
+                }
+            }
             if ($tec) {
                 Tickets::assign($id, $tec);
                 notify_assigned($id, $tec, $fechaAt ?: null);

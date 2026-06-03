@@ -55,8 +55,16 @@
       <?= csrf_field() ?>
       <input type="hidden" name="id" value="<?= (int)$t['id'] ?>">
       <div class="bg-brand text-white px-4 py-3"><h3 class="font-extrabold text-[14px]">Asignar / actualizar</h3></div>
-      <div class="p-4 space-y-3.5">
+      <div class="p-4 space-y-3.5" x-data="{ modo: '<?= $proveedor ? 'externo' : 'interno' ?>', nuevo: false }">
+        <!-- Quién atiende: técnico interno o proveedor externo -->
         <div>
+          <label class="block text-[11px] font-bold uppercase tracking-wide text-muted mb-1.5">Atiende</label>
+          <div class="flex gap-1.5 bg-brand-tint rounded-xl p-1 mb-2">
+            <button type="button" @click="modo='interno'" class="tap flex-1 h-8 text-[12.5px] font-bold rounded-lg" :class="modo==='interno' ? 'bg-brand text-white' : 'text-brand-dark/70'">Técnico interno</button>
+            <button type="button" @click="modo='externo'" class="tap flex-1 h-8 text-[12.5px] font-bold rounded-lg" :class="modo==='externo' ? 'bg-brand text-white' : 'text-brand-dark/70'">Proveedor externo</button>
+          </div>
+        </div>
+        <div x-show="modo==='interno'">
           <label class="block text-[11px] font-bold uppercase tracking-wide text-muted mb-1.5">Técnico</label>
           <select name="tecnico" class="fld w-full">
             <option value="">— Sin cambio —</option>
@@ -64,6 +72,20 @@
               <option value="<?= (int)$tc['id'] ?>"><?= h($tc['display'] ?: $tc['name']) ?></option>
             <?php endforeach; ?>
           </select>
+        </div>
+        <div x-show="modo==='externo'" x-cloak>
+          <label class="block text-[11px] font-bold uppercase tracking-wide text-muted mb-1.5">Proveedor externo</label>
+          <select name="proveedor" x-show="!nuevo" class="fld w-full mb-1.5">
+            <option value="">— Selecciona —</option>
+            <?php foreach ($proveedores as $pv): ?>
+              <option value="<?= (int)$pv['id'] ?>" <?= $proveedor && (int)$proveedor['id'] === (int)$pv['id'] ? 'selected' : '' ?>><?= h($pv['name']) ?></option>
+            <?php endforeach; ?>
+          </select>
+          <div x-show="nuevo" x-cloak class="space-y-1.5 mb-1.5">
+            <input name="proveedor_nuevo" placeholder="Nombre del proveedor" class="fld w-full">
+            <input name="proveedor_email" type="email" placeholder="Correo (opcional)" class="fld w-full">
+          </div>
+          <button type="button" @click="nuevo=!nuevo" class="tap text-[12px] font-bold text-brand-dark" x-text="nuevo ? '← Elegir existente' : '+ Nuevo proveedor'"></button>
         </div>
         <div>
           <label class="block text-[11px] font-bold uppercase tracking-wide text-muted mb-1.5">Urgencia</label>
@@ -79,10 +101,29 @@
         </div>
         <button class="tap w-full bg-brand hover:bg-brand-dark text-white font-extrabold text-[14px] rounded-xl py-3 mt-1 transition-colors">Guardar y notificar</button>
         <?php if ($t['tecnico_name']): ?>
-          <p class="text-[12px] text-muted">Asignado actualmente a <span class="font-bold text-ink"><?= h($t['tecnico_name']) ?></span>.</p>
+          <p class="text-[12px] text-muted">Técnico: <span class="font-bold text-ink"><?= h($t['tecnico_name']) ?></span></p>
+        <?php endif; ?>
+        <?php if ($proveedor): ?>
+          <p class="text-[12px] text-muted">Proveedor externo: <span class="font-bold text-ink"><?= h($proveedor['name']) ?></span><?= $proveedor['email'] ? ' · ' . h($proveedor['email']) : '' ?></p>
         <?php endif; ?>
       </div>
     </form>
+
+    <?php if (is_open_status((int)$t['status'])): ?>
+      <form method="post" action="<?= h(url('dalia/close')) ?>" class="bg-surface rounded-card p-4" x-data="{open:false}"
+            onsubmit="return confirm('¿Cerrar este ticket?');">
+        <?= csrf_field() ?>
+        <input type="hidden" name="id" value="<?= (int)$t['id'] ?>">
+        <button type="button" @click="open=!open" class="w-full flex items-center justify-between font-bold text-[13.5px] text-ink">
+          <span>Cerrar ticket (coordinación)</span><span x-text="open?'▲':'▼'"></span>
+        </button>
+        <div x-show="open" x-cloak class="mt-3 space-y-2">
+          <textarea name="nota" rows="2" placeholder="Nota de cierre (qué se resolvió)…" class="fld w-full resize-none"></textarea>
+          <button class="tap w-full text-white font-extrabold text-[13.5px] rounded-xl py-2.5" style="background:#1d8a5a">Cerrar y generar hoja</button>
+          <p class="text-[11.5px] text-faint">Úsalo cuando lo atiende un proveedor externo o se resuelve sin técnico interno.</p>
+        </div>
+      </form>
+    <?php endif; ?>
 
     <?php partial('linked_assets', ['assets' => $assets]); ?>
 
