@@ -8,6 +8,7 @@ class Followups
         $items = [];
         $items[] = [
             'is_initial' => true,
+            'users_id'   => (int)($ticket['users_id_recipient'] ?? 0),
             'author'     => $ticket['users_id_recipient'] ? Users::displayName((int)$ticket['users_id_recipient']) : 'Solicitante',
             'date'       => $ticket['date'],
             'content'    => $ticket['content'] ?? '',
@@ -24,6 +25,7 @@ class Followups
         foreach ($rows as $r) {
             $items[] = [
                 'is_initial' => false,
+                'users_id'   => (int)$r['users_id'],
                 'author'     => trim($r['dn']) !== '' ? $r['dn'] : ($r['uname'] ?: 'Usuario'),
                 'date'       => $r['date'],
                 'content'    => $r['content'] ?? '',
