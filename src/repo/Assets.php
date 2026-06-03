@@ -79,6 +79,16 @@ class Assets
         return (bool) q_val($sql . " LIMIT 1", $p);
     }
 
+    // Renombra un activo (corrección de datos). typeKey validado contra TYPES (no SQL injection).
+    public static function rename(string $typeKey, int $id, string $name): bool
+    {
+        $t = self::typeByKey($typeKey);
+        $name = trim($name);
+        if (!$t || $id <= 0 || $name === '') return false;
+        return db()->prepare("UPDATE {$t['table']} SET name = :n, date_mod = NOW() WHERE id = :id")
+            ->execute([':n' => mb_substr($name, 0, 255), ':id' => $id]);
+    }
+
     // Dar de baja un activo (states_id = 3 = Baja). Solo Dalia/admin. Queda en histórico.
     public static function baja(string $typeKey, int $id): bool
     {

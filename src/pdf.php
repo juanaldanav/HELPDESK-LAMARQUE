@@ -23,11 +23,20 @@ function service_sheet_pdf(array $t, array $thread, array $assets): ?string
 
     $brand = '#006970';
     $esc = fn($s) => htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
+    $logo = __DIR__ . '/../public/assets/lamarque-logo.png';
 
-    // Encabezado
-    $html = '<table cellpadding="6" style="background-color:' . $brand . ';color:#ffffff;">'
-        . '<tr><td width="60%"><b style="font-size:15px;">SOPORTE LAMARQUE</b><br/><span style="font-size:9px;">Hoja de mantenimiento / servicio</span></td>'
-        . '<td width="40%" align="right"><b style="font-size:13px;">Ticket #' . (int)$t['id'] . '</b><br/><span style="font-size:9px;">' . $esc($t['entity_name']) . '</span></td></tr></table><br/><br/>';
+    // Membrete: logo (Image absoluta) a la izquierda, datos del documento a la derecha
+    if (is_file($logo)) {
+        // 323x80 → 42mm de ancho ≈ 10.4mm de alto
+        $pdf->Image($logo, 16, 15, 42, 0, 'PNG', '', 'T', false, 300);
+    }
+    $html = '<table cellpadding="2"><tr>'
+        . '<td width="50%">&nbsp;</td>'
+        . '<td width="50%" align="right"><span style="font-size:8px;color:#5d6f70;">HOJA DE MANTENIMIENTO / SERVICIO</span><br/>'
+        . '<b style="font-size:14px;color:' . $brand . ';">Ticket #' . (int)$t['id'] . '</b><br/>'
+        . '<span style="font-size:9px;color:#5d6f70;">' . $esc($t['entity_name']) . '</span></td>'
+        . '</tr></table>'
+        . '<table cellpadding="0"><tr><td style="border-bottom:1.4px solid ' . $brand . ';"></td></tr></table><br/>';
 
     // Metadatos
     $rows = [
@@ -59,13 +68,19 @@ function service_sheet_pdf(array $t, array $thread, array $assets): ?string
             . '<p style="font-size:10px;">' . nl2br($esc(trim($content))) . '</p>';
     }
 
-    // Firmas
-    $html .= '<br/><br/><br/><table cellpadding="4" style="font-size:9px;color:#5d6f70;" align="center">'
-        . '<tr><td width="45%" align="center" style="border-top:1px solid #90a0a0;">Firma del técnico</td>'
-        . '<td width="10%"></td>'
-        . '<td width="45%" align="center" style="border-top:1px solid #90a0a0;">Firma de la sucursal</td></tr></table>';
-
     $pdf->writeHTML($html, true, false, true, false, '');
+
+    // Separación amplia antes de las firmas (salto a nueva zona si queda poco espacio)
+    if ($pdf->GetY() > 235) $pdf->AddPage();
+    else $pdf->Ln(26);
+
+    $firmas = '<table cellpadding="6" style="font-size:9px;color:#5d6f70;">'
+        . '<tr>'
+        . '<td width="45%" align="center" style="border-top:0.6px solid #90a0a0;">Firma del técnico</td>'
+        . '<td width="10%"></td>'
+        . '<td width="45%" align="center" style="border-top:0.6px solid #90a0a0;">Firma de la sucursal</td>'
+        . '</tr></table>';
+    $pdf->writeHTML($firmas, true, false, true, false, '');
     $pdf->Output($path, 'F');
     return is_file($path) ? $path : null;
 }

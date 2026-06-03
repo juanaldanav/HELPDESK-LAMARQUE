@@ -63,10 +63,20 @@ foreach ($cats as $c) if ($c['key'] === $active) { $activeCat = $c; break; }
 <?php else: ?>
   <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
     <?php foreach ($items as $a): $baja = (int)$a['states_id'] === 3; ?>
-      <div class="bg-surface rounded-card p-4 <?= $baja ? 'opacity-60' : '' ?>">
+      <div class="bg-surface rounded-card p-4 <?= $baja ? 'opacity-60' : '' ?>" x-data="{ edit: false }">
         <div class="flex items-start justify-between gap-2">
           <div class="min-w-0">
-            <div class="font-bold text-[14.5px] text-ink leading-snug"><?= h($a['name']) ?></div>
+            <div x-show="!edit" class="font-bold text-[14.5px] text-ink leading-snug"><?= h($a['name']) ?></div>
+            <form x-show="edit" x-cloak method="post" action="<?= h(url('dalia/asset/rename')) ?>" class="flex gap-1.5">
+              <?= csrf_field() ?>
+              <input type="hidden" name="type_key" value="<?= h($a['type_key']) ?>">
+              <input type="hidden" name="asset_id" value="<?= (int)$a['id'] ?>">
+              <input type="hidden" name="entity" value="<?= h((string)($entity ?? '')) ?>">
+              <input type="hidden" name="cat" value="<?= h($active) ?>">
+              <input type="hidden" name="q" value="<?= h($q) ?>">
+              <input name="name" value="<?= h($a['name']) ?>" required maxlength="255" class="fld flex-1" style="padding:6px 10px;font-size:13px">
+              <button class="tap text-[12px] font-bold px-2.5 py-1.5 rounded-lg bg-brand text-white shrink-0">OK</button>
+            </form>
             <div class="text-[12px] font-mono text-faint mt-1"><?= h($a['serial']) ?></div>
             <div class="text-[11.5px] text-faint mt-0.5"><?= h($a['entity_name'] ?? '—') ?></div>
           </div>
@@ -78,6 +88,7 @@ foreach ($cats as $c) if ($c['key'] === $active) { $activeCat = $c; break; }
               <?= svg_icon('external', 13) ?> Ver referencia
             </a>
           <?php endif; ?>
+          <button type="button" @click="edit = !edit" class="tap text-[12px] font-bold text-muted" x-text="edit ? 'Cancelar' : 'Renombrar'"></button>
           <?php if (!$baja): ?>
             <form method="post" action="<?= h(url('dalia/asset/baja')) ?>" class="ml-auto"
                   onsubmit="return confirm('¿Dar de baja este activo? Quedará en histórico marcado como Baja.');">

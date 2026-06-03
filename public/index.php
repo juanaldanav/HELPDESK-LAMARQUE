@@ -78,6 +78,20 @@ try {
             redirect('login');
             break;
 
+        // ---------- MI CUENTA (cambiar contraseña propia, todos los roles) ----------
+        case 'account':
+            $u = require_login();
+            render('account', ['title' => 'Mi cuenta', 'u' => $u, 'ok' => !empty($_GET['ok']), 'err' => $_GET['err'] ?? '']);
+            break;
+
+        case 'account/password':
+            $u = require_login();
+            csrf_check();
+            $res = Users::changeOwnPassword((int)$u['id'], $_POST['current'] ?? '', $_POST['pass'] ?? '', $_POST['confirm'] ?? '');
+            if ($res['ok']) redirect('account', ['ok' => 1]);
+            redirect('account', ['err' => $res['error']]);
+            break;
+
         case 'forgot':
             if ($method === 'POST') {
                 csrf_check();
@@ -274,12 +288,17 @@ try {
                 'from'     => $_GET['from'] ?? null,
                 'to'       => $_GET['to'] ?? null,
                 'search'   => trim($_GET['q'] ?? '') ?: null,
-                'limit'    => 300,
             ];
-            $list = Tickets::listing($opts);
+            $per = (int)($_GET['per'] ?? 25);
+            if (!in_array($per, [25, 50, 100], true)) $per = 25;
+            $total = Tickets::countListing($opts);
+            $pages = max(1, (int)ceil($total / $per));
+            $page = max(1, min($pages, (int)($_GET['page'] ?? 1)));
+            $list = Tickets::listing($opts + ['limit' => $per, 'offset' => ($page - 1) * $per]);
             render('dalia/tickets', [
                 'title' => 'Tickets', 'list' => $list, 'f' => $_GET,
                 'sucursales' => Users::sucursales(), 'tecnicos' => Users::tecnicos(), 'cats' => categories_grouped(),
+                'total' => $total, 'per' => $per, 'page' => $page, 'pages' => $pages,
             ]);
             break;
 
@@ -389,6 +408,15 @@ try {
             ]);
             break;
 
+        case 'dalia/asset/rename':
+            $u = require_role(['dalia']);
+            csrf_check();
+            Assets::rename($_POST['type_key'] ?? '', (int)($_POST['asset_id'] ?? 0), $_POST['name'] ?? '');
+            redirect('dalia/assets', array_filter([
+                'entity' => $_POST['entity'] ?? '', 'cat' => $_POST['cat'] ?? '', 'q' => $_POST['q'] ?? '',
+            ]));
+            break;
+
         case 'dalia/asset/baja':
             $u = require_role(['dalia']);
             csrf_check();
@@ -418,6 +446,9 @@ try {
             $entity = (int)($_POST['entity'] ?? 0);
             if (!in_array($role, ['sucursal', 'tecnico', 'dalia'], true)) redirect('dalia/users', ['err' => 'Rol inválido.']);
             if ($role === 'sucursal' && $entity <= 0) redirect('dalia/users', ['err' => 'Elige la sucursal para el rol Sucursal.']);
+            // Datos (nombre/correo) — corrección de info mal extraída
+            $resD = Users::updateProfileData($uid, $_POST['firstname'] ?? '', $_POST['realname'] ?? '', $_POST['email'] ?? '');
+            if (!$resD['ok']) redirect('dalia/users', ['err' => $resD['error']]);
             Users::setRole($uid, $role, $entity);
             Users::setActive($uid, !empty($_POST['active']));
             redirect('dalia/users', ['ok' => 'Usuario actualizado.']);

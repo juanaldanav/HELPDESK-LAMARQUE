@@ -118,6 +118,35 @@ class Users
         }
     }
 
+    // Actualiza nombre y correo (corrección de datos mal extraídos). email '' = no tocar correo.
+    public static function updateProfileData(int $uid, string $firstname, string $realname, string $email): array
+    {
+        $email = trim($email);
+        if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) return ['ok' => false, 'error' => 'Correo inválido.'];
+        db()->prepare("UPDATE glpi_users SET firstname = :f, realname = :r WHERE id = :u")
+            ->execute([':f' => trim($firstname), ':r' => trim($realname), ':u' => $uid]);
+        if ($email !== '') {
+            $cur = q_val("SELECT id FROM glpi_useremails WHERE users_id = :u ORDER BY is_default DESC LIMIT 1", [':u' => $uid]);
+            if ($cur) {
+                db()->prepare("UPDATE glpi_useremails SET email = :e WHERE id = :id")->execute([':e' => $email, ':id' => $cur]);
+            } else {
+                db()->prepare("INSERT INTO glpi_useremails (users_id, email, is_default) VALUES (:u, :e, 1)")->execute([':u' => $uid, ':e' => $email]);
+            }
+        }
+        return ['ok' => true];
+    }
+
+    // Cambio de contraseña propio: verifica la actual. Devuelve [ok, error?].
+    public static function changeOwnPassword(int $uid, string $current, string $new, string $confirm): array
+    {
+        if (strlen($new) < 8) return ['ok' => false, 'error' => 'La nueva contraseña debe tener al menos 8 caracteres.'];
+        if ($new !== $confirm) return ['ok' => false, 'error' => 'Las contraseñas no coinciden.'];
+        $hash = q_val("SELECT password FROM glpi_users WHERE id = :u", [':u' => $uid]);
+        if (!$hash || !password_verify($current, $hash)) return ['ok' => false, 'error' => 'La contraseña actual es incorrecta.'];
+        self::setPassword($uid, $new);
+        return ['ok' => true];
+    }
+
     public static function setActive(int $uid, bool $active): void
     {
         db()->prepare("UPDATE glpi_users SET is_active = :a WHERE id = :u")

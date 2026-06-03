@@ -55,6 +55,7 @@ class Tickets
         if (!empty($opts['search'])) { $where[] = "t.name LIKE :fsq"; $p[':fsq'] = '%' . $opts['search'] . '%'; }
 
         $limit = isset($opts['limit']) ? max(1, (int)$opts['limit']) : 200;
+        $offset = isset($opts['offset']) ? max(0, (int)$opts['offset']) : 0;
         $sql = "SELECT t.id, t.name, t.status, t.urgency, t.date, t.closedate, t.solvedate,
                        t.itilcategories_id, t.entities_id,
                        c.completename AS cat_name,
@@ -67,8 +68,36 @@ class Tickets
                 LEFT JOIN glpi_entities e ON e.id = t.entities_id
                 WHERE " . implode(' AND ', $where) . "
                 ORDER BY t.date DESC
-                LIMIT $limit";
+                LIMIT $limit OFFSET $offset";
         return q_all($sql, $p);
+    }
+
+    // Total de resultados para los mismos filtros (paginación). Reusa la lógica de WHERE.
+    public static function countListing(array $opts = []): int
+    {
+        $where = ["t.is_deleted = 0"];
+        $p = [];
+        $u = current_user();
+        if ($u && $u['role'] === 'sucursal') { $where[] = "t.entities_id = :eid"; $p[':eid'] = $u['entity_id']; }
+        if (!empty($opts['assigned_to'])) {
+            $where[] = "EXISTS (SELECT 1 FROM glpi_tickets_users tu WHERE tu.tickets_id = t.id AND tu.type = 2 AND tu.users_id = :atid)";
+            $p[':atid'] = (int)$opts['assigned_to'];
+        }
+        if (!empty($opts['status']) && is_array($opts['status'])) {
+            $in = [];
+            foreach (array_values($opts['status']) as $i => $s) { $k = ":st$i"; $in[] = $k; $p[$k] = (int)$s; }
+            $where[] = "t.status IN (" . implode(',', $in) . ")";
+        }
+        if (!empty($opts['entity'])) { $where[] = "t.entities_id = :fent"; $p[':fent'] = (int)$opts['entity']; }
+        if (!empty($opts['category'])) { $where[] = "t.itilcategories_id = :fcat"; $p[':fcat'] = (int)$opts['category']; }
+        if (!empty($opts['tecnico'])) {
+            $where[] = "EXISTS (SELECT 1 FROM glpi_tickets_users tu WHERE tu.tickets_id = t.id AND tu.type = 2 AND tu.users_id = :ftec)";
+            $p[':ftec'] = (int)$opts['tecnico'];
+        }
+        if (!empty($opts['from'])) { $where[] = "t.date >= :ffrom"; $p[':ffrom'] = $opts['from'] . ' 00:00:00'; }
+        if (!empty($opts['to']))   { $where[] = "t.date <= :fto";   $p[':fto']   = $opts['to'] . ' 23:59:59'; }
+        if (!empty($opts['search'])) { $where[] = "t.name LIKE :fsq"; $p[':fsq'] = '%' . $opts['search'] . '%'; }
+        return (int) q_val("SELECT COUNT(*) FROM glpi_tickets t WHERE " . implode(' AND ', $where), $p);
     }
 
     // ---- Un ticket con verificación de scope ----

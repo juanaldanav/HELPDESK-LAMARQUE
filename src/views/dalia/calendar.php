@@ -17,7 +17,7 @@ foreach ($events as $ev) {
     }
 }
 ?>
-<div x-data="{ openNew: false, sel: null }">
+<div x-data="{ openNew: false, sel: null, newDate: '<?= h($ym) ?>-01' }">
 
 <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
   <div class="flex items-center gap-2">
@@ -73,7 +73,8 @@ foreach ($events as $ev) {
     <?php for ($day = 1; $day <= $daysInMonth; $day++):
         $dateStr = sprintf('%04d-%02d-%02d', $y, $m, $day);
         $isToday = $dateStr === $today; ?>
-      <div class="min-h-24 p-1.5 <?= $isToday ? 'bg-brand-tint' : '' ?>">
+      <div class="min-h-24 p-1.5 cursor-pointer hover:bg-brand-tint/40 transition-colors <?= $isToday ? 'bg-brand-tint' : '' ?>"
+           @click="newDate='<?= $dateStr ?>'; openNew=true" title="Agendar el <?= $dateStr ?>">
         <?php if ($isToday): ?>
           <span class="inline-grid place-items-center w-6 h-6 rounded-full bg-brand text-white text-[11px] font-extrabold mb-1"><?= $day ?></span>
         <?php else: ?>
@@ -90,7 +91,7 @@ foreach ($events as $ev) {
                   'tecnico' => $ev['tecnico_name'] ?: null, 'desc' => $ev['descripcion'],
                   'estado' => $ev['estado'], 'tickets_id' => $ev['tickets_id'] ? (int)$ev['tickets_id'] : null,
               ], JSON_UNESCAPED_UNICODE)); ?>
-            <button @click='sel = JSON.parse($el.dataset.ev)' data-ev="<?= $json ?>"
+            <button @click.stop='sel = JSON.parse($el.dataset.ev)' data-ev="<?= $json ?>"
                     style="background:<?= Agenda::tipoColor($ev['tipo']) ?>"
                     class="tap w-full text-left text-[10.5px] font-semibold leading-tight text-white rounded-md px-1.5 py-1 <?= $done ? 'opacity-40 line-through' : 'hover:opacity-85' ?>">
               <span class="font-extrabold"><?= h($ev['entity_tag'] ?: mb_substr($ev['entity_name'], 0, 6)) ?></span>
@@ -175,7 +176,7 @@ foreach ($events as $ev) {
       <div class="grid grid-cols-2 gap-3">
         <div>
           <label class="block text-[11px] font-bold uppercase tracking-wide text-muted mb-1.5">Fecha *</label>
-          <input type="date" name="fecha" required value="<?= h($ym) ?>-01" class="fld w-full">
+          <input type="date" name="fecha" required x-model="newDate" class="fld w-full">
         </div>
         <div>
           <label class="block text-[11px] font-bold uppercase tracking-wide text-muted mb-1.5">Fin <span class="text-faint normal-case">(rango)</span></label>

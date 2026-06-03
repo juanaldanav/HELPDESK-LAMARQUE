@@ -86,7 +86,10 @@ tailwind.config = { theme: { extend: {
       ?>
         <a href="<?= h(url($route)) ?>" class="px-3.5 py-2 rounded-xl font-bold <?= $on ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10' ?>"><?= $lbl ?></a>
       <?php endforeach; endif; ?>
-      <a href="<?= h(url('logout')) ?>" class="tap ml-1 px-3 py-1.5 rounded-xl bg-white/12 font-bold hover:bg-white/20">Salir</a>
+      <a href="<?= h(url('account')) ?>" title="Mi cuenta" class="tap ml-1 w-9 h-9 grid place-items-center rounded-xl hover:bg-white/15" aria-label="Mi cuenta">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+      </a>
+      <a href="<?= h(url('logout')) ?>" class="tap ml-0.5 px-3 py-1.5 rounded-xl bg-white/12 font-bold hover:bg-white/20">Salir</a>
       <span class="hidden md:grid w-9 h-9 ml-1 place-items-center rounded-xl bg-white text-brand-dark font-extrabold text-[12px]"><?php
         $ini = mb_strtoupper(mb_substr($u['display'], 0, 1));
         $parts = preg_split('~\s+~', trim($u['display']));
