@@ -157,7 +157,10 @@ try {
 
         case 'ticket/new':
             $u = require_role(['sucursal']);
-            render('sucursal/new', ['title' => 'Reportar problema', 'cats' => categories_grouped()]);
+            render('sucursal/new', [
+                'title' => 'Reportar problema', 'cats' => categories_grouped(),
+                'assetsGrouped' => Assets::forEntityGroupedSelect((int)$u['entity_id']),
+            ]);
             break;
 
         case 'ticket/create':
@@ -167,17 +170,19 @@ try {
             $content = trim($_POST['content'] ?? '');
             if ($name === '' || $content === '') { redirect('ticket/new'); }
             $name = mb_substr($name, 0, 250);
-            // Urgencia: clamp 1..5
-            $urgency = (int)($_POST['urgency'] ?? 3);
-            if ($urgency < 1 || $urgency > 5) $urgency = 3;
             // Categoría: debe existir, si no -> 0
             $cat = (int)($_POST['category_id'] ?? 0);
             if ($cat && !q_val("SELECT 1 FROM glpi_itilcategories WHERE id = :c", [':c' => $cat])) $cat = 0;
-            // Activo vinculado: validar clase conocida Y que pertenezca a la entidad del usuario (aislamiento)
-            $asset_itemtype = $_POST['asset_itemtype'] ?? '';
-            $asset_id = (int)($_POST['asset_id'] ?? 0);
-            if (!$asset_itemtype || !$asset_id || !Assets::existsInEntity($asset_itemtype, $asset_id, $u['entity_id'])) {
-                $asset_itemtype = ''; $asset_id = 0;
+            // Prioridad: la fija el SISTEMA por categoría (ITIL). Emergencia marcada -> Muy alta, valida coordinación.
+            $emergencia = !empty($_POST['emergencia']);
+            $urgency = $emergencia ? 1 : urgency_for_category($cat);
+            // Activo vinculado: dropdown "Clase:id" — validar clase conocida Y entidad del usuario (aislamiento)
+            $asset_itemtype = ''; $asset_id = 0;
+            $pick = trim($_POST['asset_pick'] ?? '');
+            if ($pick !== '' && preg_match('~^([A-Za-z]+):(\d+)$~', $pick, $m)) {
+                if (Assets::existsInEntity($m[1], (int)$m[2], $u['entity_id'])) {
+                    $asset_itemtype = $m[1]; $asset_id = (int)$m[2];
+                }
             }
             $id = Tickets::create([
                 'entity_id'      => $u['entity_id'],
@@ -190,6 +195,9 @@ try {
                 'asset_itemtype' => $asset_itemtype ?: null,
                 'asset_id'       => $asset_id ?: null,
             ]);
+            if ($emergencia) {
+                Followups::add($id, (int)$u['id'], "⚠ La sucursal marcó este reporte como EMERGENCIA (operación detenida). Coordinación: validar prioridad.", 0, 1);
+            }
             // fotos iniciales (hasta 5) -> followup del solicitante
             $rels = save_photos($_FILES['photos'] ?? null, $id);
             if ($rels) {
@@ -228,6 +236,18 @@ try {
             $u = require_role(['tecnico']);
             $list = Tickets::listing(['assigned_to' => $u['id'], 'status' => [1, 2, 3, 4], 'limit' => 200]);
             render('tecnico/home', ['title' => 'Mis tareas', 'list' => $list, 'agenda' => Agenda::forTecnico((int)$u['id'])]);
+            break;
+
+        case 'tec/agenda/done':
+            $u = require_role(['tecnico']);
+            csrf_check();
+            $aid = (int)($_POST['id'] ?? 0);
+            $ev = Agenda::get($aid);
+            // Solo puede marcar realizado SU propio mantenimiento
+            if ($ev && (int)$ev['users_id_tecnico'] === (int)$u['id']) {
+                Agenda::setEstado($aid, 'realizado');
+            }
+            redirect('tec/home');
             break;
 
         case 'tec/detail':
@@ -440,6 +460,30 @@ try {
             $ymBack = $_POST['ym'] ?? date('Y-m');
             if (!preg_match('~^\d{4}-\d{2}$~', $ymBack)) $ymBack = date('Y-m');
             redirect('dalia/calendar', ['ym' => $ymBack]);
+            break;
+
+        case 'dalia/new':
+            $u = require_role(['dalia']);
+            render('dalia/new', ['title' => 'Levantar ticket', 'cats' => categories_grouped(), 'sucursales' => Users::sucursales()]);
+            break;
+
+        case 'dalia/create':
+            $u = require_role(['dalia']);
+            csrf_check();
+            $entity = (int)($_POST['entity'] ?? 0);
+            $name = trim($_POST['name'] ?? '');
+            $content = trim($_POST['content'] ?? '');
+            $validEnt = $entity > 0 && q_val("SELECT 1 FROM glpi_entities WHERE id = :e", [':e' => $entity]);
+            if (!$validEnt || $name === '' || $content === '') redirect('dalia/new');
+            $urg = (int)($_POST['urgency'] ?? 3); if ($urg < 1 || $urg > 5) $urg = 3;
+            $cat = (int)($_POST['category_id'] ?? 0);
+            if ($cat && !q_val("SELECT 1 FROM glpi_itilcategories WHERE id = :c", [':c' => $cat])) $cat = 0;
+            $id = Tickets::create([
+                'entity_id' => $entity, 'name' => mb_substr($name, 0, 250), 'content' => $content,
+                'urgency' => $urg, 'type' => 1, 'category_id' => $cat, 'requester_id' => (int)$u['id'],
+            ]);
+            Followups::add($id, (int)$u['id'], "Ticket levantado por Mejora Continua (" . h($u['display']) . ").", 0, 1);
+            redirect('dalia/view', ['id' => $id, 'ok' => 1]);
             break;
 
         case 'dalia/assets':

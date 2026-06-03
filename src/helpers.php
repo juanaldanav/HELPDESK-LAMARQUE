@@ -87,6 +87,25 @@ function urgency_chip(int $u): string
         . '<span class="w-1.5 h-1.5 rounded-full" style="background:' . $hex . '"></span>' . h(urgency_label($u)) . '</span>';
 }
 
+// Prioridad asignada por el SISTEMA según categoría (ITIL: el solicitante no la elige).
+// Matriz por criticidad de la categoría. Dalia/agente puede ajustarla luego.
+function urgency_for_category(int $catId): int
+{
+    if ($catId <= 0) return 3;
+    $n = mb_strtolower((string) q_val("SELECT completename FROM glpi_itilcategories WHERE id = :c", [':c' => $catId]));
+    if ($n === '') return 3;
+    // Muy alta (1): paro de servicio vital
+    if (str_contains($n, 'crítico') || str_contains($n, 'critico') || str_contains($n, 'sin agua')
+        || str_contains($n, 'sin internet') || str_contains($n, 'red caída') || str_contains($n, 'fuga')) return 1;
+    // Alta (2): correctivo (algo descompuesto)
+    if (str_contains($n, 'correctivo') || str_contains($n, 'wansoft') || str_contains($n, 'kiosko')) return 2;
+    // Baja (4): preventivo / estético / jardinería / limpieza
+    if (str_contains($n, 'preventivo') || str_contains($n, 'jardiner') || str_contains($n, 'limpieza')
+        || str_contains($n, 'pintura') || str_contains($n, 'fachada')) return 4;
+    // Media (3): soporte TI, infraestructura general y demás
+    return 3;
+}
+
 // ---- Iconos SVG inline del design-system (trazo 1.7-1.9, tipo Lucide) ----
 function svg_icon(string $name, int $size = 15): string
 {

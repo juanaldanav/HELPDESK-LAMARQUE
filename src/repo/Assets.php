@@ -67,6 +67,22 @@ class Assets
         return $rows;
     }
 
+    // Activos de una entidad agrupados por categoría (para <select> con optgroups al levantar ticket).
+    public static function forEntityGroupedSelect(?int $entityId): array
+    {
+        $out = [];
+        foreach (self::TYPES as $t) {
+            $rows = q_all(
+                "SELECT id, name, serial FROM {$t['table']}
+                 WHERE is_deleted = 0" . ($entityId !== null ? " AND entities_id = :e" : "") . "
+                 ORDER BY name, serial LIMIT 500",
+                $entityId !== null ? [':e' => $entityId] : []
+            );
+            if ($rows) $out[] = ['label' => $t['label'], 'class' => $t['class'], 'items' => $rows];
+        }
+        return $out;
+    }
+
     // ¿El activo (clase GLPI + id) existe y, si se pasa entityId, pertenece a esa entidad?
     // Usado para impedir que una sucursal vincule activos de otra (aislamiento).
     public static function existsInEntity(string $class, int $id, ?int $entityId): bool

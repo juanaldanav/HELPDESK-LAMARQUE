@@ -35,18 +35,38 @@ $nUrg = count(array_filter($list, fn($t) => (int)$t['urgency'] <= 2));
       <div class="space-y-2">
         <?php foreach ($agenda as $ev):
             $col = Agenda::tipoColor($ev['tipo']);
-            $rango = fecha($ev['fecha']) . ($ev['fecha_fin'] ? ' → ' . fecha($ev['fecha_fin']) : '');
-            $href = $ev['tickets_id'] ? url('tec/detail', ['id' => $ev['tickets_id']]) : null; ?>
-          <?php if ($href): ?><a href="<?= h($href) ?>" class="tap block"><?php else: ?><div><?php endif; ?>
-            <div class="bg-surface rounded-card p-3.5 flex items-center gap-3">
+            $rango = fecha($ev['fecha']) . ($ev['fecha_fin'] ? ' → ' . fecha($ev['fecha_fin']) : ''); ?>
+          <div class="bg-surface rounded-card overflow-hidden" x-data="{ open: false }">
+            <button type="button" @click="open = !open" class="tap w-full p-3.5 flex items-center gap-3 text-left">
               <span class="w-9 h-9 shrink-0 grid place-items-center rounded-xl text-white" style="background:<?= $col ?>"><?= svg_icon(Agenda::TIPO_ICON[$ev['tipo']] ?? 'wrench', 18) ?></span>
               <div class="min-w-0 flex-1">
                 <div class="font-bold text-[13.5px] text-ink truncate"><?= h($ev['tipo']) ?></div>
                 <div class="text-[11.5px] text-muted truncate"><?= h($ev['entity_name']) ?> · <?= h(substr($rango, 0, 22)) ?></div>
               </div>
               <span class="text-[10.5px] font-bold px-2 py-0.5 rounded-full shrink-0" style="background:<?= $col ?>1a;color:<?= $col ?>"><?= $ev['clase'] === 'correctivo' ? 'Correctivo' : 'Preventivo' ?></span>
+              <svg class="shrink-0 text-faint transition-transform" :class="open ? 'rotate-180' : ''" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+            <div x-show="open" x-cloak x-transition class="px-3.5 pb-3.5">
+              <div class="border-t border-canvas pt-3 space-y-1.5 text-[13px]">
+                <div class="flex justify-between gap-3"><span class="text-muted">Sucursal</span><span class="font-semibold text-ink"><?= h($ev['entity_name']) ?></span></div>
+                <div class="flex justify-between gap-3"><span class="text-muted">Fecha</span><span class="font-semibold"><?= h($rango) ?></span></div>
+                <?php if (!empty($ev['descripcion'])): ?>
+                  <div><span class="text-muted">Notas:</span> <span class="text-ink/85"><?= h($ev['descripcion']) ?></span></div>
+                <?php endif; ?>
+              </div>
+              <div class="flex gap-2 mt-3">
+                <?php if ($ev['tickets_id']): ?>
+                  <a href="<?= h(url('tec/detail', ['id' => $ev['tickets_id']])) ?>" class="tap flex-1 text-center bg-brand text-white text-[12.5px] font-bold rounded-xl py-2.5">Ver ticket</a>
+                <?php endif; ?>
+                <form method="post" action="<?= h(url('tec/agenda/done')) ?>" class="flex-1"
+                      onsubmit="return confirm('¿Marcar este mantenimiento como realizado?');">
+                  <?= csrf_field() ?>
+                  <input type="hidden" name="id" value="<?= (int)$ev['id'] ?>">
+                  <button class="tap w-full text-white text-[12.5px] font-bold rounded-xl py-2.5" style="background:#1d8a5a">Marcar realizado</button>
+                </form>
+              </div>
             </div>
-          <?php if ($href): ?></a><?php else: ?></div><?php endif; ?>
+          </div>
         <?php endforeach; ?>
       </div>
     </div>

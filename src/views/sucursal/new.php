@@ -1,4 +1,4 @@
-<?php /** @var array $cats */ ?>
+<?php /** @var array $cats @var array $assetsGrouped */ ?>
 <div class="max-w-md md:max-w-2xl mx-auto" x-data="nuevoTicket()">
   <a href="<?= h(url('home')) ?>" class="tap inline-flex items-center gap-1 text-[14px] font-semibold text-muted -ml-1 px-1 py-1 rounded-xl">
     <?= svg_icon('back', 20) ?> Inicio
@@ -26,52 +26,37 @@
           </optgroup>
         <?php endforeach; ?>
       </select>
-    </div>
-
-    <div>
-      <label class="block text-[12px] font-bold uppercase tracking-wide text-muted mb-2">Urgencia</label>
-      <input type="hidden" name="urgency" :value="urgency">
-      <div class="flex gap-1.5">
-        <?php foreach (URGENCY as $v => $lbl): $hex = URGENCY_HEX[$v]; ?>
-          <button type="button" @click="urgency=<?= $v ?>"
-                  class="tap flex-1 flex flex-col items-center gap-1 py-2.5 rounded-xl transition-colors"
-                  :class="urgency===<?= $v ?> ? 'text-white' : 'bg-canvas text-muted'"
-                  :style="urgency===<?= $v ?> ? 'background:<?= $hex ?>' : ''">
-            <span class="w-2 h-2 rounded-full" :style="urgency===<?= $v ?> ? 'background:#fff' : 'background:<?= $hex ?>'"></span>
-            <span class="text-[11px] font-bold"><?= h($lbl) ?></span>
-          </button>
-        <?php endforeach; ?>
-      </div>
+      <p class="text-[11.5px] text-faint mt-1.5">La prioridad la asigna el sistema según la categoría; coordinación puede ajustarla.</p>
     </div>
 
     <div>
       <label class="block text-[12px] font-bold uppercase tracking-wide text-muted mb-1.5">Descripción *</label>
-      <textarea name="content" required rows="4" placeholder="Describe el problema con detalle…" class="fld resize-none"></textarea>
+      <textarea name="content" required rows="4" placeholder="Describe el problema y cómo afecta la operación…" class="fld resize-none"></textarea>
     </div>
 
-    <!-- Buscar activo -->
-    <div class="relative">
+    <!-- Equipo afectado: dropdown por categoría -->
+    <div>
       <label class="block text-[12px] font-bold uppercase tracking-wide text-muted mb-1.5">Equipo afectado <span class="text-faint font-medium normal-case">(opcional)</span></label>
-      <template x-if="!selected">
-        <input type="text" x-model="q" @input.debounce.300ms="search()" placeholder="Busca por folio LMQ o nombre…" class="fld">
-      </template>
-      <template x-if="selected">
-        <div class="flex items-center justify-between gap-2 rounded-2xl bg-brand-tint px-4 py-3">
-          <span class="text-[13px] min-w-0"><span class="font-mono text-brand-dark" x-text="selected.serial"></span> · <span x-text="selected.name"></span></span>
-          <button type="button" @click="clearSel()" class="tap text-[12px] font-bold text-muted shrink-0">Quitar</button>
-        </div>
-      </template>
-      <input type="hidden" name="asset_itemtype" :value="selected ? selected.itemtype : ''">
-      <input type="hidden" name="asset_id" :value="selected ? selected.id : ''">
-      <div x-show="results.length && !selected" x-cloak class="absolute z-10 left-0 right-0 mt-1.5 bg-surface rounded-2xl overflow-hidden max-h-64 overflow-y-auto">
-        <template x-for="r in results" :key="r.itemtype + r.id">
-          <button type="button" @click="pick(r)" class="tap w-full text-left px-4 py-2.5 active:bg-brand-tint">
-            <div class="text-[13.5px] font-bold text-ink" x-text="r.name"></div>
-            <div class="text-[11.5px] text-muted"><span class="font-mono" x-text="r.serial"></span> · <span x-text="r.type_label"></span></div>
-          </button>
-        </template>
-      </div>
+      <select name="asset_pick" class="fld">
+        <option value="">— Sin equipo específico —</option>
+        <?php foreach ($assetsGrouped as $g): ?>
+          <optgroup label="<?= h($g['label']) ?>">
+            <?php foreach ($g['items'] as $a): ?>
+              <option value="<?= h($g['class']) ?>:<?= (int)$a['id'] ?>"><?= h($a['name']) ?> — <?= h($a['serial']) ?></option>
+            <?php endforeach; ?>
+          </optgroup>
+        <?php endforeach; ?>
+      </select>
     </div>
+
+    <!-- Emergencia (excepcional, la valida coordinación) -->
+    <label class="flex items-center gap-3 bg-surface rounded-card px-4 py-3.5 cursor-pointer">
+      <input type="checkbox" name="emergencia" value="1" class="peer sr-only"><span class="sw shrink-0"></span>
+      <span class="leading-tight">
+        <span class="block text-[14px] font-bold" style="color:#d83a34">Es una emergencia</span>
+        <span class="block text-[12px] text-muted">La operación está detenida (ej. sin luz, sin agua, equipo crítico caído). Coordinación lo validará.</span>
+      </span>
+    </label>
 
     <!-- Fotos hasta 5 con previews -->
     <div>
@@ -108,15 +93,7 @@
 <script>
 function nuevoTicket() {
   return {
-    urgency: 3, q: '', results: [], selected: null, fotos: [],
-    search() {
-      const s = this.q.trim();
-      if (s.length < 2) { this.results = []; return; }
-      fetch('<?= h(url('asset/search')) ?>&q=' + encodeURIComponent(s))
-        .then(r => r.json()).then(d => this.results = d).catch(() => this.results = []);
-    },
-    pick(r) { this.selected = r; this.results = []; this.q = ''; },
-    clearSel() { this.selected = null; },
+    fotos: [],
     agregar(e) {
       for (const f of e.target.files) {
         if (this.fotos.length >= 5) break;

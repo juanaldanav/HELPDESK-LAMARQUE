@@ -5,10 +5,15 @@ $g = fn($k) => h($f[$k] ?? ''); ?>
     <h1 class="text-[27px] font-extrabold tracking-tight">Tickets · consolidado</h1>
     <p class="text-muted text-[13.5px] mt-0.5">Todas las sucursales en una vista.</p>
   </div>
-  <a href="<?= h(url('dalia/export', array_filter($f ?? []))) ?>" class="tap inline-flex items-center gap-2 bg-ink text-white text-[13px] font-bold rounded-xl px-4 py-2.5">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
-    Exportar CSV
-  </a>
+  <div class="flex gap-2">
+    <a href="<?= h(url('dalia/new')) ?>" class="tap inline-flex items-center gap-2 bg-brand hover:bg-brand-dark text-white text-[13px] font-bold rounded-xl px-4 py-2.5 transition-colors">
+      <?= svg_icon('plus', 16) ?> Levantar ticket
+    </a>
+    <a href="<?= h(url('dalia/export', array_filter($f ?? []))) ?>" class="tap inline-flex items-center gap-2 bg-ink text-white text-[13px] font-bold rounded-xl px-4 py-2.5">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+      Exportar CSV
+    </a>
+  </div>
 </div>
 
 <form method="get" class="bg-surface rounded-card p-4 mb-4 grid sm:grid-cols-3 lg:grid-cols-6 gap-3 items-end">
