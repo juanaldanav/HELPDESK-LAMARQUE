@@ -40,8 +40,8 @@
       <div class="flex items-center justify-between mt-1">
         <label class="tap cursor-pointer inline-flex items-center gap-1.5 text-[12.5px] font-semibold px-2 py-1.5 rounded-lg active:bg-canvas" :class="foto ? 'text-brand-dark' : 'text-muted'">
           <?= svg_icon('camera', 18) ?>
-          <span x-text="foto ? 'Foto lista' : 'Foto'"></span>
-          <input type="file" name="photo" accept="image/*" class="hidden" @change="foto = $event.target.files.length > 0">
+          <span x-text="foto ? 'Adjunto listo' : 'Foto / PDF'"></span>
+          <input type="file" name="photo" accept="image/*,application/pdf" class="hidden" @change="foto = $event.target.files.length > 0">
         </label>
         <button type="submit" class="tap text-[13px] font-bold rounded-xl px-4 py-2 transition-colors"
                 :class="(txt.trim() || foto) ? 'bg-brand text-white' : 'bg-canvas text-faint'">Comentar</button>
@@ -84,6 +84,7 @@
           <div x-show="nuevo" x-cloak class="space-y-1.5 mb-1.5">
             <input name="proveedor_nuevo" placeholder="Nombre del proveedor" class="fld w-full">
             <input name="proveedor_email" type="email" placeholder="Correo (opcional)" class="fld w-full">
+            <input name="proveedor_tel" type="tel" placeholder="Teléfono (opcional)" class="fld w-full">
           </div>
           <button type="button" @click="nuevo=!nuevo" class="tap text-[12px] font-bold text-brand-dark" x-text="nuevo ? '← Elegir existente' : '+ Nuevo proveedor'"></button>
         </div>
@@ -103,11 +104,37 @@
         <?php if ($t['tecnico_name']): ?>
           <p class="text-[12px] text-muted">Técnico: <span class="font-bold text-ink"><?= h($t['tecnico_name']) ?></span></p>
         <?php endif; ?>
-        <?php if ($proveedor): ?>
-          <p class="text-[12px] text-muted">Proveedor externo: <span class="font-bold text-ink"><?= h($proveedor['name']) ?></span><?= $proveedor['email'] ? ' · ' . h($proveedor['email']) : '' ?></p>
-        <?php endif; ?>
       </div>
     </form>
+
+    <?php if ($proveedor): ?>
+      <!-- Contacto del proveedor asignado -->
+      <div class="bg-surface rounded-card p-4">
+        <div class="text-[10.5px] font-bold uppercase tracking-wide text-faint mb-2">Proveedor externo asignado</div>
+        <div class="font-bold text-[14px] text-ink"><?= h($proveedor['name']) ?></div>
+        <div class="flex flex-wrap gap-2 mt-2.5">
+          <?php if (!empty($proveedor['phonenumber'])): ?>
+            <a href="tel:<?= h(preg_replace('~[^0-9+]~', '', $proveedor['phonenumber'])) ?>" class="tap inline-flex items-center gap-1.5 text-[12px] font-bold px-3 py-2 rounded-xl bg-brand-tint text-brand-dark">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.13.96.36 1.9.7 2.8a2 2 0 0 1-.45 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.45c.9.34 1.84.57 2.8.7A2 2 0 0 1 22 16.9Z"/></svg>
+              Llamar · <?= h($proveedor['phonenumber']) ?>
+            </a>
+          <?php endif; ?>
+          <?php if (!empty($proveedor['email'])): ?>
+            <a href="mailto:<?= h($proveedor['email']) ?>" class="tap inline-flex items-center gap-1.5 text-[12px] font-bold px-3 py-2 rounded-xl bg-brand-tint text-brand-dark">
+              <?= svg_icon('mail', 14) ?> <?= h($proveedor['email']) ?>
+            </a>
+          <?php endif; ?>
+        </div>
+        <?php if (!empty($proveedor['email'])): ?>
+          <form method="post" action="<?= h(url('dalia/notify_prov')) ?>" class="mt-3">
+            <?= csrf_field() ?>
+            <input type="hidden" name="id" value="<?= (int)$t['id'] ?>">
+            <button class="tap w-full bg-ink text-white text-[13px] font-extrabold rounded-xl py-2.5">Enviar ticket por correo al proveedor</button>
+          </form>
+        <?php endif; ?>
+        <p class="text-[11.5px] text-faint mt-2.5">Cuando el proveedor mande su hoja de servicio (correo/WhatsApp), adjúntala como PDF o foto en un comentario: queda en el historial del mantenimiento.</p>
+      </div>
+    <?php endif; ?>
 
     <?php if (is_open_status((int)$t['status'])): ?>
       <form method="post" action="<?= h(url('dalia/close')) ?>" class="bg-surface rounded-card p-4" x-data="{open:false}"

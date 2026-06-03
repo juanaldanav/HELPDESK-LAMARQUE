@@ -17,7 +17,7 @@ foreach ($events as $ev) {
     }
 }
 ?>
-<div x-data="{ openNew: false, sel: null, newDate: '<?= h($ym) ?>-01' }">
+<div x-data="{ openNew: false, sel: null, editing: false, newDate: '<?= h($ym) ?>-01' }">
 
 <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
   <div class="flex items-center gap-2">
@@ -88,10 +88,13 @@ foreach ($events as $ev) {
                   'color' => Agenda::tipoColor($ev['tipo']),
                   'fecha' => $ev['fecha'], 'fecha_fin' => $ev['fecha_fin'],
                   'entity' => $ev['entity_name'], 'tag' => $ev['entity_tag'],
-                  'tecnico' => $ev['tecnico_name'] ?: null, 'desc' => $ev['descripcion'],
+                  'entity_id' => (int)$ev['entities_id'],
+                  'tecnico' => $ev['tecnico_name'] ?: null,
+                  'tecnico_id' => (int)($ev['users_id_tecnico'] ?? 0),
+                  'desc' => $ev['descripcion'],
                   'estado' => $ev['estado'], 'tickets_id' => $ev['tickets_id'] ? (int)$ev['tickets_id'] : null,
               ], JSON_UNESCAPED_UNICODE)); ?>
-            <button @click.stop='sel = JSON.parse($el.dataset.ev)' data-ev="<?= $json ?>"
+            <button @click.stop='sel = JSON.parse($el.dataset.ev); editing = false' data-ev="<?= $json ?>"
                     style="background:<?= Agenda::tipoColor($ev['tipo']) ?>"
                     class="tap w-full text-left text-[10.5px] font-semibold leading-tight text-white rounded-md px-1.5 py-1 <?= $done ? 'opacity-40 line-through' : 'hover:opacity-85' ?>">
               <span class="font-extrabold"><?= h($ev['entity_tag'] ?: mb_substr($ev['entity_name'], 0, 6)) ?></span>
@@ -113,17 +116,52 @@ foreach ($events as $ev) {
         <button @click="sel = null" class="tap w-8 h-8 grid place-items-center rounded-lg bg-white/15"><?= svg_icon('close', 16) ?></button>
       </div>
       <div class="p-5">
-        <dl class="space-y-2 text-[13.5px]">
+        <dl x-show="!editing" class="space-y-2 text-[13.5px]">
           <div class="flex justify-between gap-3"><dt class="text-muted">Sucursal</dt><dd class="font-bold text-ink" x-text="sel.entity"></dd></div>
           <div class="flex justify-between gap-3"><dt class="text-muted">Fecha</dt><dd class="font-semibold" x-text="sel.fecha + (sel.fecha_fin ? ' → ' + sel.fecha_fin : '')"></dd></div>
-          <div class="flex justify-between gap-3" x-show="sel.tecnico"><dt class="text-muted">Técnico</dt><dd class="font-semibold" x-text="sel.tecnico"></dd></div>
+          <div class="flex justify-between gap-3"><dt class="text-muted">Técnico</dt><dd class="font-semibold" :class="sel.tecnico ? '' : 'text-faint'" x-text="sel.tecnico || 'Por definir'"></dd></div>
           <div class="flex justify-between gap-3"><dt class="text-muted">Clase</dt><dd class="font-semibold capitalize" x-text="sel.clase"></dd></div>
           <div class="flex justify-between gap-3"><dt class="text-muted">Estado</dt><dd class="font-bold capitalize" x-text="sel.estado"></dd></div>
           <div x-show="sel.desc"><dt class="text-muted mb-1">Notas</dt><dd class="text-ink/85" x-text="sel.desc"></dd></div>
         </dl>
-        <a x-show="sel.tickets_id" :href="'<?= h(url('dalia/view')) ?>&id=' + sel.tickets_id"
+        <button x-show="!editing" type="button" @click="editing = true"
+                class="tap mt-3 text-[13px] font-bold text-brand-dark">✎ Editar evento</button>
+
+        <!-- Edición del evento (importados incluidos) -->
+        <form x-show="editing" x-cloak method="post" action="<?= h(url('dalia/agenda/update')) ?>" class="space-y-3">
+          <?= csrf_field() ?>
+          <input type="hidden" name="id" :value="sel.id">
+          <div class="grid grid-cols-2 gap-2.5">
+            <div><label class="block text-[10.5px] font-bold uppercase tracking-wide text-muted mb-1">Sucursal</label>
+              <select name="entity" class="fld w-full" :value="sel.entity_id">
+                <?php foreach ($sucursales as $s): ?><option value="<?= (int)$s['id'] ?>"><?= h($s['name']) ?></option><?php endforeach; ?>
+              </select></div>
+            <div><label class="block text-[10.5px] font-bold uppercase tracking-wide text-muted mb-1">Tipo</label>
+              <select name="tipo" class="fld w-full" :value="sel.tipo">
+                <?php foreach (Agenda::TIPOS as $tp): ?><option value="<?= h($tp) ?>"><?= h($tp) ?></option><?php endforeach; ?>
+              </select></div>
+          </div>
+          <div class="grid grid-cols-2 gap-2.5">
+            <div><label class="block text-[10.5px] font-bold uppercase tracking-wide text-muted mb-1">Fecha</label>
+              <input type="date" name="fecha" required class="fld w-full" :value="sel.fecha"></div>
+            <div><label class="block text-[10.5px] font-bold uppercase tracking-wide text-muted mb-1">Fin (rango)</label>
+              <input type="date" name="fecha_fin" class="fld w-full" :value="sel.fecha_fin || ''"></div>
+          </div>
+          <div><label class="block text-[10.5px] font-bold uppercase tracking-wide text-muted mb-1">Técnico</label>
+            <select name="tecnico" class="fld w-full" :value="sel.tecnico_id || ''">
+              <option value="">— Por definir —</option>
+              <?php foreach ($tecnicos as $tc): ?><option value="<?= (int)$tc['id'] ?>"><?= h($tc['display'] ?: $tc['name']) ?></option><?php endforeach; ?>
+            </select></div>
+          <div><label class="block text-[10.5px] font-bold uppercase tracking-wide text-muted mb-1">Notas</label>
+            <textarea name="descripcion" rows="2" class="fld w-full resize-none" :value="sel.desc || ''"></textarea></div>
+          <div class="flex gap-2">
+            <button type="button" @click="editing = false" class="tap flex-1 bg-canvas text-muted text-[13px] font-bold rounded-xl py-2.5">Cancelar</button>
+            <button class="tap flex-1 bg-brand hover:bg-brand-dark text-white text-[13px] font-extrabold rounded-xl py-2.5">Guardar cambios</button>
+          </div>
+        </form>
+        <a x-show="!editing && sel.tickets_id" :href="'<?= h(url('dalia/view')) ?>&id=' + sel.tickets_id"
            class="inline-flex items-center gap-1.5 mt-3 text-[13px] text-brand-dark font-bold"><?= svg_icon('external', 13) ?> Ver ticket vinculado</a>
-        <div class="flex gap-2 mt-5">
+        <div x-show="!editing" class="flex gap-2 mt-5">
           <form method="post" action="<?= h(url('dalia/agenda/estado')) ?>" class="flex-1" x-show="sel.estado !== 'realizado'">
             <?= csrf_field() ?>
             <input type="hidden" name="id" :value="sel.id"><input type="hidden" name="ym" value="<?= h($ym) ?>">

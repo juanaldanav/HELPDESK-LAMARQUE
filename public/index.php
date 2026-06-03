@@ -23,6 +23,22 @@ function save_photo(?array $file, int $ticketId): ?string
     return $rel;
 }
 
+// Adjunto de Dalia: imagen O PDF (hoja del proveedor). Devuelve ['rel','is_pdf','name'] o null.
+function save_attachment(?array $file, int $ticketId): ?array
+{
+    if (!$file || ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) return null;
+    $allowed = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'image/heic' => 'heic', 'image/heif' => 'heic', 'image/gif' => 'gif', 'application/pdf' => 'pdf'];
+    $mime = mime_content_type($file['tmp_name']) ?: '';
+    $ext = $allowed[$mime] ?? null;
+    if (!$ext) { error_log("[soporte-v2 upload] adjunto rechazado mime=$mime"); return null; }
+    $dir = rtrim(cfg('uploads_dir'), '/\\') . '/' . $ticketId;
+    if (!is_dir($dir)) @mkdir($dir, 0775, true);
+    $fname = bin2hex(random_bytes(8)) . '.' . $ext;
+    if (!@move_uploaded_file($file['tmp_name'], $dir . '/' . $fname)) return null;
+    $orig = preg_replace('~[^A-Za-z0-9 ._()-]~u', '', (string)($file['name'] ?? 'documento'));
+    return ['rel' => $ticketId . '/' . $fname, 'is_pdf' => $ext === 'pdf', 'name' => mb_substr($orig ?: 'documento.pdf', 0, 80)];
+}
+
 // Hasta $max fotos de un input multiple (photos[]). Devuelve rutas relativas guardadas.
 function save_photos(?array $files, int $ticketId, int $max = 5): array
 {
@@ -333,6 +349,20 @@ try {
                 'ok' => !empty($_GET['ok'])]);
             break;
 
+        case 'dalia/notify_prov':
+            $u = require_role(['dalia']);
+            csrf_check();
+            $id = (int)($_POST['id'] ?? 0);
+            $t = Tickets::get($id);
+            if (!$t) { deny('Ticket no encontrado.', 404); }
+            $sup = Suppliers::ofTicket($id);
+            if ($sup && !empty($sup['email'])) {
+                $okSend = send_mail($sup['email'], "Solicitud de servicio — Ticket #$id · " . $t['entity_name'], prov_ticket_email($t));
+                Followups::add($id, (int)$u['id'], ($okSend ? "Se envió" : "Se intentó enviar") . " el detalle del ticket por correo al proveedor: " . $sup['name'] . ".", 0, 1);
+            }
+            redirect('dalia/view', ['id' => $id, 'ok' => 1]);
+            break;
+
         case 'dalia/close':
             $u = require_role(['dalia']);
             csrf_check();
@@ -358,8 +388,10 @@ try {
             $t = Tickets::get($id);
             if (!$t) { deny('Ticket no encontrado.', 404); }
             $msg = trim($_POST['content'] ?? '');
-            $rel = save_photo($_FILES['photo'] ?? null, $id);
-            if ($rel) $msg .= "\n[foto:$rel]";
+            $att = save_attachment($_FILES['photo'] ?? null, $id);
+            if ($att) {
+                $msg .= $att['is_pdf'] ? "\n[doc:{$att['rel']}|{$att['name']}]" : "\n[foto:{$att['rel']}]";
+            }
             if (trim($msg) !== '') Followups::add($id, (int)$u['id'], $msg, 0, 1);
             redirect('dalia/view', ['id' => $id]);
             break;
@@ -376,15 +408,16 @@ try {
             // Proveedor externo: seleccionar existente o crear uno nuevo
             $provId = (int)($_POST['proveedor'] ?? 0);
             $provNuevo = trim($_POST['proveedor_nuevo'] ?? '');
-            if ($provNuevo !== '') $provId = Suppliers::findOrCreate($provNuevo, trim($_POST['proveedor_email'] ?? ''));
+            if ($provNuevo !== '') $provId = Suppliers::findOrCreate($provNuevo, trim($_POST['proveedor_email'] ?? ''), trim($_POST['proveedor_tel'] ?? ''));
             if ($provId) {
                 Suppliers::assign($id, $provId);
                 $sup = Suppliers::get($provId);
                 db()->prepare("UPDATE glpi_tickets SET status = IF(status = 1, 2, status), date_mod = NOW() WHERE id = :t")->execute([':t' => $id]);
                 Followups::add($id, (int)$u['id'], "Derivado a proveedor externo: " . ($sup['name'] ?? ''), 0, 1);
                 if (!empty($sup['email'])) {
-                    send_mail($sup['email'], "Servicio asignado — Ticket #$id",
-                        "<p>Se le asignó la atención del ticket <b>#$id</b>" . ($fechaAt ? " para el <b>" . h($fechaAt) . "</b>" : "") . ".</p>");
+                    $tFull = Tickets::get($id);
+                    send_mail($sup['email'], "Solicitud de servicio — Ticket #$id · " . ($tFull['entity_name'] ?? ''),
+                        prov_ticket_email($tFull) . ($fechaAt ? "<p><b>Fecha solicitada:</b> " . h($fechaAt) . "</p>" : ""));
                 }
             }
             if ($tec) {
@@ -451,6 +484,27 @@ try {
             ]);
             notify_agendado($aid);
             redirect('dalia/calendar', ['ym' => substr($fecha, 0, 7), 'ok' => 1]);
+            break;
+
+        case 'dalia/agenda/update':
+            $u = require_role(['dalia']);
+            csrf_check();
+            $aid = (int)($_POST['id'] ?? 0);
+            $fecha = $_POST['fecha'] ?? '';
+            $ffin  = $_POST['fecha_fin'] ?? '';
+            $ent   = (int)($_POST['entity'] ?? 0);
+            if (preg_match('~^\d{4}-\d{2}-\d{2}$~', $fecha)
+                && ($ffin === '' || (preg_match('~^\d{4}-\d{2}-\d{2}$~', $ffin) && $ffin >= $fecha))
+                && $ent > 0 && q_val("SELECT 1 FROM glpi_entities WHERE id = :e", [':e' => $ent])) {
+                Agenda::update($aid, [
+                    'entity_id' => $ent, 'tipo' => $_POST['tipo'] ?? '',
+                    'fecha' => $fecha, 'fecha_fin' => $ffin,
+                    'tecnico_id' => (int)($_POST['tecnico'] ?? 0),
+                    'descripcion' => $_POST['descripcion'] ?? '',
+                ]);
+            }
+            $ymBack = substr($fecha, 0, 7) ?: date('Y-m');
+            redirect('dalia/calendar', ['ym' => $ymBack, 'ok' => 1]);
             break;
 
         case 'dalia/agenda/estado':

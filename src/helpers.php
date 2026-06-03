@@ -221,6 +221,12 @@ function msg_html(string $content): string
         $photos[] = $m[1];
         return '';
     }, $content);
+    // Documentos adjuntos (PDF — ej. hoja del proveedor): [doc:ruta|nombre]
+    $docs = [];
+    $content = preg_replace_callback('~\[doc:([^|\]]+)\|?([^\]]*)\]~', function ($m) use (&$docs) {
+        $docs[] = ['rel' => $m[1], 'name' => $m[2] !== '' ? $m[2] : 'Documento'];
+        return '';
+    }, $content);
 
     $out = nl2br(h(trim($content)));
     if ($photos) {
@@ -232,6 +238,12 @@ function msg_html(string $content): string
             $out .= '<a href="' . h($src) . '" target="_blank"><img src="' . h($src) . '" class="w-24 h-24 object-cover rounded-lg border border-slate-200"></a>';
         }
         $out .= '</div>';
+    }
+    foreach ($docs as $d) {
+        if (!preg_match('~^\d+/[A-Za-z0-9._-]+$~', $d['rel']) || strpos($d['rel'], '..') !== false) continue;
+        $src = url('img', ['p' => $d['rel']]);
+        $out .= '<a href="' . h($src) . '" target="_blank" class="tap inline-flex items-center gap-2 mt-2 px-3 py-2 rounded-xl bg-brand-tint text-brand-dark text-[12.5px] font-bold">'
+            . svg_icon('print', 15) . ' ' . h($d['name']) . '</a>';
     }
     return $out;
 }

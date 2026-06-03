@@ -103,6 +103,26 @@ class Agenda
         return (int) db()->lastInsertId();
     }
 
+    // Edición completa de un evento (los importados del cronograma también son modificables).
+    public static function update(int $id, array $d): bool
+    {
+        $tipo = in_array($d['tipo'] ?? '', self::TIPOS, true) ? $d['tipo'] : null;
+        if (!$tipo || empty($d['fecha'])) return false;
+        return db()->prepare(
+            "UPDATE lmq_agenda SET entities_id = :e, tipo = :t, fecha = :f, fecha_fin = :ff,
+                    users_id_tecnico = :tec, descripcion = :d
+             WHERE id = :id"
+        )->execute([
+            ':e'   => (int)$d['entity_id'],
+            ':t'   => $tipo,
+            ':f'   => $d['fecha'],
+            ':ff'  => !empty($d['fecha_fin']) ? $d['fecha_fin'] : null,
+            ':tec' => (int)($d['tecnico_id'] ?? 0) ?: null,
+            ':d'   => mb_substr(trim($d['descripcion'] ?? ''), 0, 400) ?: null,
+            ':id'  => $id,
+        ]);
+    }
+
     public static function setEstado(int $id, string $estado): void
     {
         if (!in_array($estado, ['programado', 'realizado', 'cancelado'], true)) return;

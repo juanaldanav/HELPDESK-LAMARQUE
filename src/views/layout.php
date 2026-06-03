@@ -128,5 +128,17 @@ if ($u && $u['role'] === 'sucursal' && $rootTabs):
   <?php endforeach; ?>
 </nav>
 <?php endif; ?>
+<script>
+// Los <select> nativos abren hacia arriba si no hay espacio abajo. Antes de que abra,
+// subimos el select en el viewport para que siempre despliegue hacia abajo.
+document.addEventListener('mousedown', function (e) {
+  var s = e.target && e.target.closest ? e.target.closest('select') : null;
+  if (!s) return;
+  var r = s.getBoundingClientRect();
+  if (window.innerHeight - r.bottom < 340) {
+    window.scrollBy({ top: r.top - 110, behavior: 'instant' });
+  }
+}, true);
+</script>
 </body>
 </html>

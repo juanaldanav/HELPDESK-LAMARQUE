@@ -68,6 +68,28 @@ function notify_assigned(int $ticketId, int $tecnicoId, ?string $fecha = null): 
         "<p>Se te asignó el ticket <b>#$ticketId</b>: " . h($t['name'] ?? '') . "</p><p>Sucursal: " . h(Users::entityName((int)($t['entities_id'] ?? 0))) . "</p>" . $extra . "<p>Entra al portal para atenderlo.</p>");
 }
 
+// Cuerpo de correo para PROVEEDOR EXTERNO con el detalle completo del ticket.
+function prov_ticket_email(array $t): string
+{
+    $desc = html_entity_decode((string)$t['content'], ENT_QUOTES, 'UTF-8');
+    $desc = strip_tags(preg_replace('~<br\s*/?>|</p>~i', "\n", $desc));
+    $desc = preg_replace('~\[(foto|doc):[^\]]+\]~', '', $desc);
+    $assets = linked_assets_full((int)$t['id']);
+    $eq = '';
+    foreach ($assets as $a) $eq .= h($a['name']) . ' (' . h($a['serial']) . ') ';
+    return "<p>Solicitamos su servicio para el siguiente mantenimiento:</p>"
+        . "<table style='font-size:13.5px;line-height:1.7'>"
+        . "<tr><td style='color:#5d6f70;padding-right:14px'><b>Ticket</b></td><td>#" . (int)$t['id'] . "</td></tr>"
+        . "<tr><td style='color:#5d6f70'><b>Sucursal</b></td><td>" . h($t['entity_name']) . "</td></tr>"
+        . "<tr><td style='color:#5d6f70'><b>Categoría</b></td><td>" . h($t['cat_name'] ?: 'General') . "</td></tr>"
+        . "<tr><td style='color:#5d6f70'><b>Urgencia</b></td><td>" . h(urgency_label((int)$t['urgency'])) . "</td></tr>"
+        . "<tr><td style='color:#5d6f70'><b>Reportado</b></td><td>" . fecha($t['date']) . "</td></tr>"
+        . ($eq ? "<tr><td style='color:#5d6f70'><b>Equipo</b></td><td>" . $eq . "</td></tr>" : "")
+        . "</table>"
+        . "<p style='background:#f0f5f5;padding:10px 14px;border-radius:8px'>" . nl2br(h(trim($desc))) . "</p>"
+        . "<p>Al concluir, favor de enviar su hoja de servicio a <b>coordinación</b> (este correo) para integrarla al historial.</p>";
+}
+
 // Notifica un mantenimiento agendado (técnico + sucursal). Best-effort.
 function notify_agendado(int $agendaId): void
 {
