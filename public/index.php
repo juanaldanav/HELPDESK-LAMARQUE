@@ -227,7 +227,7 @@ try {
         case 'tec/home':
             $u = require_role(['tecnico']);
             $list = Tickets::listing(['assigned_to' => $u['id'], 'status' => [1, 2, 3, 4], 'limit' => 200]);
-            render('tecnico/home', ['title' => 'Mis tareas', 'list' => $list]);
+            render('tecnico/home', ['title' => 'Mis tareas', 'list' => $list, 'agenda' => Agenda::forTecnico((int)$u['id'])]);
             break;
 
         case 'tec/detail':
@@ -309,6 +309,19 @@ try {
             $thread = Followups::thread($t);
             $assets = linked_assets_full($t['id']);
             render('dalia/view', ['title' => 'Ticket #' . $t['id'], 't' => $t, 'thread' => $thread, 'assets' => $assets, 'tecnicos' => Users::tecnicos(), 'ok' => !empty($_GET['ok'])]);
+            break;
+
+        case 'dalia/comment':
+            $u = require_role(['dalia']);
+            csrf_check();
+            $id = (int)($_POST['id'] ?? 0);
+            $t = Tickets::get($id);
+            if (!$t) { deny('Ticket no encontrado.', 404); }
+            $msg = trim($_POST['content'] ?? '');
+            $rel = save_photo($_FILES['photo'] ?? null, $id);
+            if ($rel) $msg .= "\n[foto:$rel]";
+            if (trim($msg) !== '') Followups::add($id, (int)$u['id'], $msg, 0, 1);
+            redirect('dalia/view', ['id' => $id]);
             break;
 
         case 'dalia/assign':
@@ -464,6 +477,16 @@ try {
             if (strlen($pass) < 8) redirect('dalia/users', ['err' => 'La contraseña debe tener al menos 8 caracteres.']);
             Users::setPassword($uid, $pass);
             redirect('dalia/users', ['ok' => 'Contraseña restablecida.']);
+            break;
+
+        case 'dalia/user/delete':
+            $u = require_role(['dalia']);
+            csrf_check();
+            $uid = (int)($_POST['uid'] ?? 0);
+            if ($uid === (int)$u['id']) redirect('dalia/users', ['err' => 'No puedes eliminar tu propia cuenta.']);
+            if (!Users::isManaged($uid)) redirect('dalia/users', ['err' => 'Esa cuenta no se puede eliminar desde aquí.']);
+            Users::softDelete($uid);
+            redirect('dalia/users', ['ok' => 'Usuario eliminado.']);
             break;
 
         case 'dalia/user/create':

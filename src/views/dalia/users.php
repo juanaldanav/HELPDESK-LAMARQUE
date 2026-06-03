@@ -98,6 +98,12 @@ $ROLE_COL = ['sucursal' => '#0c83c4', 'tecnico' => '#b5610f', 'dalia' => '#00697
           <input type="password" name="pass" minlength="8" required placeholder="Nueva contraseña (mín. 8)" class="fld flex-1" style="padding:9px 12px;font-size:13px">
           <button class="tap text-[12px] font-bold px-3 py-2 rounded-lg text-white" style="background:#b5610f">Restablecer</button>
         </form>
+        <form method="post" action="<?= h(url('dalia/user/delete')) ?>" class="mt-2 text-right"
+              onsubmit="return confirm('¿Eliminar a <?= h(addslashes($dn)) ?>? Quedará inactivo y fuera del portal (su historial se conserva).');">
+          <?= csrf_field() ?>
+          <input type="hidden" name="uid" value="<?= (int)$usr['id'] ?>">
+          <button class="tap text-[11.5px] font-bold" style="color:#d83a34">Eliminar usuario</button>
+        </form>
       <?php endif; ?>
     </div>
   <?php endforeach; ?>

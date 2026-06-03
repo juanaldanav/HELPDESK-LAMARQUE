@@ -28,9 +28,25 @@
 </div>
 
 <div class="grid lg:grid-cols-3 gap-5 items-start">
-  <!-- Timeline -->
+  <!-- Timeline + comentar -->
   <div class="lg:col-span-2">
     <?php partial('timeline', ['thread' => $thread]); ?>
+
+    <form method="post" action="<?= h(url('dalia/comment')) ?>" enctype="multipart/form-data" class="mt-4 bg-surface rounded-card p-3" x-data="{txt:'', foto:false}">
+      <?= csrf_field() ?>
+      <input type="hidden" name="id" value="<?= (int)$t['id'] ?>">
+      <textarea name="content" x-model="txt" rows="2" placeholder="Escribe un comentario para la sucursal y el técnico…"
+        class="w-full resize-none bg-transparent text-[14px] placeholder:text-faint outline-none px-1 pt-1"></textarea>
+      <div class="flex items-center justify-between mt-1">
+        <label class="tap cursor-pointer inline-flex items-center gap-1.5 text-[12.5px] font-semibold px-2 py-1.5 rounded-lg active:bg-canvas" :class="foto ? 'text-brand-dark' : 'text-muted'">
+          <?= svg_icon('camera', 18) ?>
+          <span x-text="foto ? 'Foto lista' : 'Foto'"></span>
+          <input type="file" name="photo" accept="image/*" class="hidden" @change="foto = $event.target.files.length > 0">
+        </label>
+        <button type="submit" class="tap text-[13px] font-bold rounded-xl px-4 py-2 transition-colors"
+                :class="(txt.trim() || foto) ? 'bg-brand text-white' : 'bg-canvas text-faint'">Comentar</button>
+      </div>
+    </form>
   </div>
 
   <!-- Sidebar -->

@@ -61,6 +61,20 @@ class Agenda
         return $rows;
     }
 
+    // Mantenimientos programados asignados a un técnico (para que le LLEGUEN en su app).
+    public static function forTecnico(int $uid): array
+    {
+        return q_all(
+            "SELECT a.*, e.name AS entity_name, e.tag AS entity_tag
+             FROM lmq_agenda a
+             LEFT JOIN glpi_entities e ON e.id = a.entities_id
+             WHERE a.users_id_tecnico = :u AND a.estado = 'programado'
+               AND COALESCE(a.fecha_fin, a.fecha) >= CURDATE()
+             ORDER BY a.fecha ASC LIMIT 50",
+            [':u' => $uid]
+        );
+    }
+
     public static function get(int $id): ?array
     {
         return q_one("SELECT * FROM lmq_agenda WHERE id = :id", [':id' => $id]);

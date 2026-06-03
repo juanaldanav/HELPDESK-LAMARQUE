@@ -153,6 +153,16 @@ class Users
             ->execute([':a' => $active ? 1 : 0, ':u' => $uid]);
     }
 
+    // Eliminar (soft) un usuario gestionable: desactiva, marca is_deleted y quita perfiles operativos.
+    // No borra físicamente (conserva el histórico de tickets/GLPI).
+    public static function softDelete(int $uid): bool
+    {
+        if (!self::isManaged($uid)) return false;
+        db()->prepare("UPDATE glpi_users SET is_active = 0, is_deleted = 1 WHERE id = :u")->execute([':u' => $uid]);
+        db()->prepare("DELETE FROM glpi_profiles_users WHERE users_id = :u AND profiles_id IN (9,10,11)")->execute([':u' => $uid]);
+        return true;
+    }
+
     public static function setPassword(int $uid, string $pass): void
     {
         db()->prepare("UPDATE glpi_users SET password = :p, password_forget_token = NULL, password_forget_token_date = NULL WHERE id = :u")

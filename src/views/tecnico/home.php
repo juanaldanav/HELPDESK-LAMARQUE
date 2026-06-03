@@ -1,4 +1,5 @@
-<?php /** @var array $list */
+<?php /** @var array $list @var array $agenda */
+$agenda = $agenda ?? [];
 $stkey = fn(int $s) => [1 => 'nuevo', 2 => 'curso', 3 => 'curso', 4 => 'espera', 5 => 'resuelto', 6 => 'cerrado'][$s] ?? 'nuevo';
 $nCurso = count(array_filter($list, fn($t) => in_array((int)$t['status'], [2, 3], true)));
 $nTotal = count($list);
@@ -27,7 +28,31 @@ $nUrg = count(array_filter($list, fn($t) => (int)$t['urgency'] <= 2));
     <div class="absolute z-0 top-1 bottom-1 rounded-xl bg-brand transition-transform duration-200" :style="`left:4px; width:calc((100% - 8px)/2); transform:translateX(calc(${active} * 100%))`"></div>
   </div>
 
-  <?php if (empty($list)): ?>
+  <!-- Mantenimientos programados (del calendario de Dalia) -->
+  <?php if (!empty($agenda)): ?>
+    <div class="mb-5">
+      <h2 class="text-[12px] font-bold uppercase tracking-wide text-muted mb-2">Mantenimientos programados</h2>
+      <div class="space-y-2">
+        <?php foreach ($agenda as $ev):
+            $col = Agenda::tipoColor($ev['tipo']);
+            $rango = fecha($ev['fecha']) . ($ev['fecha_fin'] ? ' → ' . fecha($ev['fecha_fin']) : '');
+            $href = $ev['tickets_id'] ? url('tec/detail', ['id' => $ev['tickets_id']]) : null; ?>
+          <?php if ($href): ?><a href="<?= h($href) ?>" class="tap block"><?php else: ?><div><?php endif; ?>
+            <div class="bg-surface rounded-card p-3.5 flex items-center gap-3">
+              <span class="w-9 h-9 shrink-0 grid place-items-center rounded-xl text-white" style="background:<?= $col ?>"><?= svg_icon(Agenda::TIPO_ICON[$ev['tipo']] ?? 'wrench', 18) ?></span>
+              <div class="min-w-0 flex-1">
+                <div class="font-bold text-[13.5px] text-ink truncate"><?= h($ev['tipo']) ?></div>
+                <div class="text-[11.5px] text-muted truncate"><?= h($ev['entity_name']) ?> · <?= h(substr($rango, 0, 22)) ?></div>
+              </div>
+              <span class="text-[10.5px] font-bold px-2 py-0.5 rounded-full shrink-0" style="background:<?= $col ?>1a;color:<?= $col ?>"><?= $ev['clase'] === 'correctivo' ? 'Correctivo' : 'Preventivo' ?></span>
+            </div>
+          <?php if ($href): ?></a><?php else: ?></div><?php endif; ?>
+        <?php endforeach; ?>
+      </div>
+    </div>
+  <?php endif; ?>
+
+  <?php if (empty($list) && empty($agenda)): ?>
     <div class="bg-surface rounded-card p-10 text-center">
       <div class="w-12 h-12 mx-auto rounded-2xl bg-brand-tint text-brand grid place-items-center mb-3"><?= svg_icon('check', 24) ?></div>
       <p class="text-muted font-semibold">No tienes tareas pendientes.</p>
