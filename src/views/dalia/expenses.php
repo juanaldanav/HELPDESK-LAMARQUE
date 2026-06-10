@@ -101,6 +101,18 @@ $CLASE_COL = ['fijo' => '#5a4bd1', 'variable' => '#b5610f'];
   </div>
 <?php endif; ?>
 
+<!-- Mantenimiento Wansoft (integración en desarrollo) -->
+<div class="mt-5 rounded-card p-5 border border-dashed" style="border-color:rgba(0,105,112,.4);background:rgba(0,105,112,.04)">
+  <div class="flex flex-wrap items-center gap-2.5 mb-1.5">
+    <h2 class="font-extrabold text-[15px] tracking-tight">Mantenimiento — Estado de Resultados (Wansoft)</h2>
+    <span class="text-[10.5px] font-bold text-white px-2 py-0.5 rounded-full" style="background:#5a4bd1">EN DESARROLLO</span>
+  </div>
+  <p class="text-[13px] text-muted max-w-2xl">Jalará el total contable mensual de la línea <b>Mantenimiento</b> por sucursal directo del Estado de Resultados de Wansoft, para comparar el gasto real registrado en este portal contra la contabilidad. Endpoint identificado; pendiente de cablear la sincronización.</p>
+  <button type="button" disabled class="mt-3 inline-flex items-center gap-2 bg-canvas text-faint font-bold text-[13px] rounded-xl px-4 py-2.5 border border-faint/40 cursor-not-allowed">
+    <?= svg_icon('download', 16) ?> Sincronizar con Wansoft (próximamente)
+  </button>
+</div>
+
 <!-- Modal registrar gasto -->
 <div x-show="openNew" x-cloak class="fixed inset-0 z-30 grid place-items-center p-4" style="background:rgba(15,28,29,.5)" @click.self="openNew=false" @keydown.escape.window="openNew=false">
   <form method="post" action="<?= h(url('dalia/expense/create')) ?>" enctype="multipart/form-data" class="bg-surface rounded-card w-full max-w-lg overflow-hidden max-h-[90vh] overflow-y-auto" x-transition>
