@@ -46,6 +46,16 @@ function build_service_sheet(array $post): string
         $mark = !empty($post[$k]) ? '☑' : '☐';
         $lines[] = "$mark $label";
     }
+    // Subtareas / trabajos realizados (texto libre, una por línea → lista).
+    $sub = trim($post['subtareas'] ?? '');
+    if ($sub !== '') {
+        $lines[] = "";
+        $lines[] = "Trabajos realizados:";
+        foreach (preg_split('~\r?\n~', $sub) as $item) {
+            $item = trim($item);
+            if ($item !== '') $lines[] = "• " . $item;
+        }
+    }
     $obs = trim($post['observaciones'] ?? '');
     if ($obs !== '') { $lines[] = ""; $lines[] = "Observaciones: " . $obs; }
     return implode("\n", $lines);

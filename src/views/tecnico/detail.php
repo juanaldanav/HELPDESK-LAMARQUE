@@ -136,8 +136,14 @@ $open = is_open_status((int)$t['status']); ?>
           </div>
 
           <div>
+            <label class="block text-[12px] font-bold uppercase tracking-wide text-muted mb-1.5">Trabajos realizados <span class="text-faint font-medium normal-case">(uno por línea, opcional)</span></label>
+            <textarea name="subtareas" rows="3" placeholder="Ej.&#10;Desmonté y limpié el quemador&#10;Cambié la termocupla&#10;Probé encendido 3 veces"
+              class="w-full bg-surface rounded-card px-4 py-3 text-[14px] placeholder:text-faint outline-none focus:ring-2 focus:ring-brand resize-none"></textarea>
+          </div>
+
+          <div>
             <label class="block text-[12px] font-bold uppercase tracking-wide text-muted mb-1.5">Observaciones / reporte</label>
-            <textarea name="observaciones" rows="3" placeholder="Qué se hizo, refacciones usadas, pendientes…"
+            <textarea name="observaciones" rows="3" placeholder="Diagnóstico, refacciones usadas, pendientes…"
               class="w-full bg-surface rounded-card px-4 py-3 text-[14px] placeholder:text-faint outline-none focus:ring-2 focus:ring-brand resize-none"></textarea>
           </div>
 
