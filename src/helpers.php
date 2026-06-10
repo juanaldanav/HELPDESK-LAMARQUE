@@ -3,6 +3,9 @@
 
 function h($s): string { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 
+// Formato de dinero MXN: $1,234.50
+function money($n): string { return '$' . number_format((float)$n, 2, '.', ','); }
+
 function url(string $r, array $params = []): string
 {
     $base = cfg('base_url');

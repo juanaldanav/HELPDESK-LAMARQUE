@@ -154,6 +154,48 @@
 
     <?php partial('linked_assets', ['assets' => $assets]); ?>
 
+    <!-- Costo del mantenimiento -->
+    <div class="bg-surface rounded-card p-4" x-data="{add:false}">
+      <div class="flex items-center justify-between mb-2.5">
+        <div class="text-[10.5px] font-bold uppercase tracking-wide text-faint">Costo del mantenimiento</div>
+        <span class="text-[15px] font-extrabold text-brand"><?= money($gastos_total ?? 0) ?></span>
+      </div>
+      <?php if (!empty($gastos)): ?>
+        <ul class="space-y-1.5 mb-2">
+          <?php foreach ($gastos as $g): ?>
+            <li class="flex items-center justify-between gap-2 text-[12.5px]">
+              <span class="min-w-0 truncate text-ink"><?= h($g['concepto']) ?><?= $g['proveedor'] ? ' · ' . h($g['proveedor']) : '' ?>
+                <?php if (!empty($g['comprobante'])): ?><a href="<?= h(url('img', ['p' => $g['comprobante']])) ?>" target="_blank" class="text-faint">·comp.</a><?php endif; ?>
+              </span>
+              <span class="flex items-center gap-1.5 shrink-0">
+                <span class="font-bold"><?= money($g['monto']) ?></span>
+                <form method="post" action="<?= h(url('dalia/expense/delete')) ?>" onsubmit="return confirm('¿Eliminar gasto?');">
+                  <?= csrf_field() ?><input type="hidden" name="gid" value="<?= (int)$g['id'] ?>">
+                  <button class="tap text-faint hover:text-[#d83a34]" title="Eliminar"><?= svg_icon('close', 13) ?></button>
+                </form>
+              </span>
+            </li>
+          <?php endforeach; ?>
+        </ul>
+      <?php endif; ?>
+      <button type="button" @click="add=!add" class="tap text-[12px] font-bold text-brand-dark"><span x-text="add ? '← Cancelar' : '+ Agregar costo'"></span></button>
+      <form x-show="add" x-cloak method="post" action="<?= h(url('dalia/expense/create')) ?>" enctype="multipart/form-data" class="mt-2 space-y-2">
+        <?= csrf_field() ?>
+        <input type="hidden" name="tickets_id" value="<?= (int)$t['id'] ?>">
+        <input name="concepto" required placeholder="Concepto (ej. mano de obra)" class="fld w-full" style="padding:8px 11px;font-size:13px">
+        <div class="grid grid-cols-2 gap-2">
+          <input name="monto" required inputmode="decimal" placeholder="Monto" class="fld w-full" style="padding:8px 11px;font-size:13px">
+          <input type="date" name="fecha" required value="<?= h(date('Y-m-d')) ?>" class="fld w-full" style="padding:8px 11px;font-size:13px">
+        </div>
+        <select name="clase" class="fld w-full" style="padding:8px 11px;font-size:13px">
+          <option value="variable">Variable (por reparación)</option>
+          <option value="fijo">Fijo (recurrente)</option>
+        </select>
+        <input type="file" name="comprobante" accept="image/*,application/pdf" class="fld w-full" style="padding:6px 9px;font-size:12px">
+        <button class="tap w-full bg-brand text-white font-extrabold text-[13px] rounded-xl py-2.5">Guardar costo</button>
+      </form>
+    </div>
+
     <div class="bg-surface rounded-card p-4">
       <div class="text-[10.5px] font-bold uppercase tracking-wide text-faint mb-2.5">Detalles</div>
       <dl class="space-y-2 text-[13px]">

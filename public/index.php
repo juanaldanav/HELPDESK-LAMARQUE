@@ -311,7 +311,7 @@ try {
         case 'dalia/dashboard':
             $u = require_role(['dalia']);
             $period = $_GET['period'] ?? date('Y-m');
-            render('dalia/dashboard', ['title' => 'Dashboard', 'period' => $period, 'kpi' => dashboard_kpis($period)]);
+            render('dalia/dashboard', ['title' => 'Dashboard', 'period' => $period, 'kpi' => dashboard_kpis($period), 'gastos' => Gastos::summary($period)]);
             break;
 
         case 'dalia/tickets':
@@ -346,7 +346,8 @@ try {
             $assets = linked_assets_full($t['id']);
             render('dalia/view', ['title' => 'Ticket #' . $t['id'], 't' => $t, 'thread' => $thread, 'assets' => $assets,
                 'tecnicos' => Users::tecnicos(), 'proveedores' => Suppliers::all(), 'proveedor' => Suppliers::ofTicket((int)$t['id']),
-                'ok' => !empty($_GET['ok'])]);
+                'gastos' => Gastos::forTicket((int)$t['id']), 'gastos_total' => Gastos::totalForTicket((int)$t['id']),
+                'ok' => !empty($_GET['ok']), 'err' => $_GET['err'] ?? '']);
             break;
 
         case 'dalia/notify_prov':
@@ -682,6 +683,90 @@ try {
             fputcsv($out, ['ID', 'Proveedor', 'Correo', 'Teléfono', 'Autorizado', 'Tickets atendidos']);
             foreach ($rows as $r) {
                 fputcsv($out, [$r['id'], $r['name'], $r['email'] ?? '', $r['phonenumber'] ?? '', $r['is_active'] ? 'Sí' : 'No', $r['usos']]);
+            }
+            fclose($out);
+            exit;
+
+        // ---------- GASTOS (Dalia) ----------
+        case 'dalia/expenses':
+            $u = require_role(['dalia']);
+            $month    = $_GET['month'] ?? date('Y-m');
+            $entity   = (int)($_GET['entity'] ?? 0) ?: null;
+            $supplier = (int)($_GET['supplier'] ?? 0) ?: null;
+            $clase    = $_GET['clase'] ?? '';
+            $f = array_filter(['month' => $month, 'entity' => $entity, 'supplier' => $supplier, 'clase' => $clase]);
+            render('dalia/expenses', [
+                'title' => 'Gastos',
+                'gastos' => Gastos::listing($f + ['limit' => 300]),
+                'total'  => Gastos::totalFiltered($f),
+                'month'  => $month, 'entity' => $entity, 'supplier' => $supplier, 'clase' => $clase,
+                'sucursales' => Users::sucursales(), 'suppliers' => Suppliers::all(),
+                'ok' => $_GET['ok'] ?? '', 'err' => $_GET['err'] ?? '',
+            ]);
+            break;
+
+        case 'dalia/expense/create':
+            $u = require_role(['dalia']);
+            csrf_check();
+            $ticketId = (int)($_POST['tickets_id'] ?? 0);
+            $entity   = (int)($_POST['entity'] ?? 0);
+            $monto    = (float)str_replace([',', '$', ' '], '', $_POST['monto'] ?? '0');
+            $fecha    = $_POST['fecha'] ?? date('Y-m-d');
+            $concepto = trim($_POST['concepto'] ?? '');
+            $redir = function (array $p) use ($ticketId) {
+                if ($ticketId > 0) redirect('dalia/view', ['id' => $ticketId] + $p);
+                redirect('dalia/expenses', $p);
+            };
+            if ($concepto === '' || $monto <= 0) $redir(['err' => 'Concepto y monto (mayor a 0) son obligatorios.']);
+            if (!$ticketId && $entity <= 0) $redir(['err' => 'Elige la sucursal del gasto.']);
+            // Si va ligado a ticket, hereda entidad del ticket.
+            if ($ticketId > 0) {
+                $tk = Tickets::get($ticketId);
+                if (!$tk) $redir(['err' => 'Ticket no encontrado.']);
+                $entity = (int)$tk['entities_id'];
+            }
+            // Comprobante opcional (imagen o PDF). Sin ticket → carpeta "0".
+            $comp = null;
+            if (!empty($_FILES['comprobante']['name'])) {
+                $att = save_attachment($_FILES['comprobante'], $ticketId > 0 ? $ticketId : 0);
+                if ($att) $comp = $att['rel'];
+            }
+            Gastos::create([
+                'tickets_id'   => $ticketId ?: null,
+                'entity_id'    => $entity,
+                'suppliers_id' => (int)($_POST['suppliers_id'] ?? 0) ?: null,
+                'concepto'     => $concepto,
+                'clase'        => $_POST['clase'] ?? 'variable',
+                'tipo'         => trim($_POST['tipo'] ?? ''),
+                'monto'        => $monto,
+                'fecha'        => $fecha,
+                'nota'         => trim($_POST['nota'] ?? ''),
+                'comprobante'  => $comp,
+                'creator_id'   => (int)$u['id'],
+            ]);
+            $redir(['ok' => 'Gasto registrado.']);
+            break;
+
+        case 'dalia/expense/delete':
+            $u = require_role(['dalia']);
+            csrf_check();
+            $g = Gastos::get((int)($_POST['gid'] ?? 0));
+            Gastos::delete((int)($_POST['gid'] ?? 0));
+            if ($g && !empty($g['tickets_id'])) redirect('dalia/view', ['id' => (int)$g['tickets_id'], 'ok' => 'Gasto eliminado.']);
+            redirect('dalia/expenses', ['ok' => 'Gasto eliminado.']);
+            break;
+
+        case 'dalia/expenses/export':
+            $u = require_role(['dalia']);
+            $month = $_GET['month'] ?? date('Y-m');
+            $rows = Gastos::listing(['month' => $month, 'limit' => 5000]);
+            header('Content-Type: text/csv; charset=utf-8');
+            header('Content-Disposition: attachment; filename="gastos_' . $month . '.csv"');
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF");
+            fputcsv($out, ['Fecha', 'Sucursal', 'Concepto', 'Clase', 'Tipo', 'Proveedor', 'Monto', 'Ticket', 'Nota']);
+            foreach ($rows as $g) {
+                fputcsv($out, [$g['fecha'], $g['entity_name'] ?? '', $g['concepto'], $g['clase'], $g['tipo'] ?? '', $g['proveedor'] ?? '', $g['monto'], $g['tickets_id'] ?? '', $g['nota'] ?? '']);
             }
             fclose($out);
             exit;

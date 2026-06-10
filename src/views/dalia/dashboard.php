@@ -1,4 +1,6 @@
-<?php /** @var string $period @var array $kpi */ ?>
+<?php /** @var string $period @var array $kpi @var array $gastos */
+$ti = $kpi['tiempos'] ?? ['avg_respuesta_h' => null, 'avg_resolucion_h' => null, 'n_cerrados' => 0, 'distribucion' => []];
+?>
 <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
   <div>
     <h1 class="text-[27px] font-extrabold tracking-tight">Dashboard</h1>
@@ -28,6 +30,51 @@
   <div class="bg-surface rounded-card p-5">
     <div class="text-[11px] font-bold uppercase tracking-wide text-muted">Correctivo / Preventivo</div>
     <div class="text-[30px] font-extrabold mt-1.5 leading-none" style="color:var(--st-nuevo)"><?= (int)$kpi['correctivo'] ?> / <?= (int)$kpi['preventivo'] ?></div>
+  </div>
+</div>
+
+<!-- Tiempos de atención -->
+<div class="grid lg:grid-cols-3 gap-4 mb-6 stagger">
+  <div class="bg-surface rounded-card p-5">
+    <div class="text-[11px] font-bold uppercase tracking-wide text-muted">Primera respuesta (prom.)</div>
+    <div class="text-[28px] font-extrabold mt-1.5 leading-none text-brand"><?= h(fmt_horas($ti['avg_respuesta_h'])) ?></div>
+    <div class="text-[11px] text-faint mt-1">apertura → primer seguimiento</div>
+  </div>
+  <div class="bg-surface rounded-card p-5">
+    <div class="text-[11px] font-bold uppercase tracking-wide text-muted">Resolución (prom.)</div>
+    <div class="text-[28px] font-extrabold mt-1.5 leading-none" style="color:var(--st-resuelto)"><?= h(fmt_horas($ti['avg_resolucion_h'])) ?></div>
+    <div class="text-[11px] text-faint mt-1"><?= (int)$ti['n_cerrados'] ?> tickets cerrados del periodo</div>
+  </div>
+  <div class="bg-surface rounded-card p-5">
+    <div class="flex items-baseline justify-between mb-2"><h2 class="font-extrabold text-[14px] tracking-tight">Tiempo de resolución</h2><span class="text-[11px] text-faint font-semibold">distribución</span></div>
+    <?php if (array_sum($ti['distribucion']) === 0): ?><p class="text-faint text-[13px]">Sin tickets cerrados en el periodo.</p><?php else: ?><canvas id="chTiempo" height="120"></canvas><?php endif; ?>
+  </div>
+</div>
+
+<!-- Gastos del periodo -->
+<div class="grid lg:grid-cols-3 gap-4 mb-6 stagger">
+  <div class="bg-surface rounded-card p-5 flex flex-col justify-between">
+    <div>
+      <div class="text-[11px] font-bold uppercase tracking-wide text-muted">Gasto del periodo</div>
+      <div class="text-[30px] font-extrabold mt-1.5 leading-none text-ink"><?= money($gastos['total'] ?? 0) ?></div>
+    </div>
+    <?php
+      $clm = ['fijo' => 0, 'variable' => 0];
+      foreach (($gastos['por_clase'] ?? []) as $c) $clm[$c['clase']] = (float)$c['monto'];
+    ?>
+    <div class="mt-3 flex gap-4 text-[12px]">
+      <span class="font-semibold text-muted">Fijo: <span class="text-ink font-bold"><?= money($clm['fijo']) ?></span></span>
+      <span class="font-semibold text-muted">Variable: <span class="text-ink font-bold"><?= money($clm['variable']) ?></span></span>
+    </div>
+    <a href="<?= h(url('dalia/expenses', ['month' => $period])) ?>" class="tap mt-3 inline-block text-[12.5px] font-bold text-brand-dark">Ver detalle de gastos →</a>
+  </div>
+  <div class="bg-surface rounded-card p-5">
+    <div class="flex items-baseline justify-between mb-4"><h2 class="font-extrabold text-[14px] tracking-tight">Gasto por sucursal</h2></div>
+    <?php if (empty($gastos['por_sucursal'])): ?><p class="text-faint text-[13px]">Sin gastos en el periodo.</p><?php else: ?><canvas id="chGasSuc" height="150"></canvas><?php endif; ?>
+  </div>
+  <div class="bg-surface rounded-card p-5">
+    <div class="flex items-baseline justify-between mb-4"><h2 class="font-extrabold text-[14px] tracking-tight">Gasto por proveedor</h2></div>
+    <?php if (empty($gastos['por_proveedor'])): ?><p class="text-faint text-[13px]">Sin gastos en el periodo.</p><?php else: ?><canvas id="chGasProv" height="150"></canvas><?php endif; ?>
   </div>
 </div>
 
@@ -74,6 +121,17 @@ bar('chProv',
   <?= json_encode(array_column($kpi['top_proveedores'], 'label')) ?>,
   <?= json_encode(array_map('intval', array_column($kpi['top_proveedores'], 'c'))) ?>, false,
   <?= json_encode(array_map(fn($p) => $p['label'] === 'Interno' ? '#006970' : '#3b8aa6', $kpi['top_proveedores'])) ?>);
+bar('chTiempo',
+  <?= json_encode(array_keys($ti['distribucion'])) ?>,
+  <?= json_encode(array_map('intval', array_values($ti['distribucion']))) ?>, false,
+  ['#1d8a5a', '#006970', '#d39a0a', '#d83a34']);
+bar('chGasSuc',
+  <?= json_encode(array_column($gastos['por_sucursal'] ?? [], 'label')) ?>,
+  <?= json_encode(array_map('floatval', array_column($gastos['por_sucursal'] ?? [], 'monto'))) ?>, true);
+bar('chGasProv',
+  <?= json_encode(array_column($gastos['por_proveedor'] ?? [], 'label')) ?>,
+  <?= json_encode(array_map('floatval', array_column($gastos['por_proveedor'] ?? [], 'monto'))) ?>, true,
+  '#b5610f');
 (function () {
   const el = document.getElementById('chCP'); if (!el) return;
   new Chart(el, { type: 'doughnut',

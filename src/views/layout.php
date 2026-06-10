@@ -62,7 +62,7 @@ tailwind.config = { theme: { extend: {
       <span class="inline-flex items-center h-9 px-2.5 rounded-xl bg-white shrink-0">
         <img src="https://lamarque.mx/images/icons/lamarque.png" alt="Lamarque" class="h-4 w-auto object-contain">
       </span>
-      <span class="hidden sm:flex items-center gap-1.5 text-[12px] font-bold text-white/85">
+      <span class="hidden lg:flex items-center gap-1.5 text-[12px] font-bold text-white/85">
         <span class="w-1 h-1 rounded-full bg-white/45"></span><?php
           echo $u['role'] === 'tecnico' ? 'Técnico' : ($u['role'] === 'dalia' ? 'Mejora Continua' : h($u['entity_name']));
         ?>
@@ -84,11 +84,12 @@ tailwind.config = { theme: { extend: {
               ['dalia/assets',    'Activos'],
               ['dalia/users',     'Equipo'],
               ['dalia/suppliers', 'Proveedores'],
+              ['dalia/expenses',  'Gastos'],
           ];
           foreach ($links as [$route, $lbl]):
-              $on = str_starts_with($cur, $route) || ($route === 'dalia/tickets' && $cur === 'dalia/view') || ($route === 'dalia/users' && str_starts_with($cur, 'dalia/user')) || ($route === 'dalia/suppliers' && str_starts_with($cur, 'dalia/supplier'));
+              $on = str_starts_with($cur, $route) || ($route === 'dalia/tickets' && $cur === 'dalia/view') || ($route === 'dalia/users' && str_starts_with($cur, 'dalia/user')) || ($route === 'dalia/suppliers' && str_starts_with($cur, 'dalia/supplier')) || ($route === 'dalia/expenses' && str_starts_with($cur, 'dalia/expense'));
       ?>
-        <a href="<?= h(url($route)) ?>" class="px-3.5 py-2 rounded-xl font-bold <?= $on ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10' ?>"><?= $lbl ?></a>
+        <a href="<?= h(url($route)) ?>" class="px-2.5 xl:px-3.5 py-2 rounded-xl font-bold text-[13px] xl:text-sm whitespace-nowrap <?= $on ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10' ?>"><?= $lbl ?></a>
       <?php endforeach; endif; ?>
       <a href="<?= h(url('account')) ?>" title="Mi cuenta" class="tap ml-1 w-9 h-9 grid place-items-center rounded-xl hover:bg-white/15" aria-label="Mi cuenta">
         <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>

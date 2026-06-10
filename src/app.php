@@ -164,6 +164,35 @@ function dashboard_kpis(string $period): array
          WHERE t.is_deleted = 0 AND DATE_FORMAT(t.date,'%Y-%m') = :per
          GROUP BY s.id ORDER BY c DESC LIMIT 8", $p);
 
+    // ---- Tiempos de atención (métricas que pidió Dalia) ----
+    // Resolución = apertura → cierre (horas), sobre tickets abiertos en el periodo y ya cerrados.
+    $resol = q_one(
+        "SELECT AVG(TIMESTAMPDIFF(HOUR, t.date, t.closedate)) AS avg_h,
+                COUNT(*) AS n
+         FROM glpi_tickets t
+         WHERE t.is_deleted = 0 AND DATE_FORMAT(t.date,'%Y-%m') = :per
+           AND t.closedate IS NOT NULL AND t.closedate > '1970-01-01 00:00:00'", $p);
+    // Primera respuesta = apertura → primer seguimiento (horas).
+    $resp = q_val(
+        "SELECT AVG(TIMESTAMPDIFF(HOUR, t.date, fr.first_date))
+         FROM glpi_tickets t
+         JOIN (SELECT items_id, MIN(date) AS first_date FROM glpi_itilfollowups
+               WHERE itemtype = 'Ticket' GROUP BY items_id) fr ON fr.items_id = t.id
+         WHERE t.is_deleted = 0 AND DATE_FORMAT(t.date,'%Y-%m') = :per", $p);
+    // Distribución del tiempo de resolución (para la gráfica de barras).
+    $dist = ['<4 h' => 0, '4–24 h' => 0, '1–3 días' => 0, '+3 días' => 0];
+    foreach (q_all(
+        "SELECT TIMESTAMPDIFF(HOUR, t.date, t.closedate) AS h
+         FROM glpi_tickets t
+         WHERE t.is_deleted = 0 AND DATE_FORMAT(t.date,'%Y-%m') = :per
+           AND t.closedate IS NOT NULL AND t.closedate > '1970-01-01 00:00:00'", $p) as $row) {
+        $hh = (int)$row['h'];
+        if ($hh < 4) $dist['<4 h']++;
+        elseif ($hh < 24) $dist['4–24 h']++;
+        elseif ($hh < 72) $dist['1–3 días']++;
+        else $dist['+3 días']++;
+    }
+
     return [
         'total'        => $total,
         'completados'  => $completados,
@@ -175,7 +204,21 @@ function dashboard_kpis(string $period): array
         'top_sucursales' => $topSuc,
         'top_categorias' => $topCat,
         'top_proveedores' => $topProv,
+        'tiempos' => [
+            'avg_respuesta_h'  => $resp !== null ? round((float)$resp, 1) : null,
+            'avg_resolucion_h' => isset($resol['avg_h']) && $resol['avg_h'] !== null ? round((float)$resol['avg_h'], 1) : null,
+            'n_cerrados'       => (int)($resol['n'] ?? 0),
+            'distribucion'     => $dist,
+        ],
     ];
+}
+
+// Formatea horas a texto legible: 2.5 h, 18 h, 3.2 días.
+function fmt_horas(?float $h): string
+{
+    if ($h === null) return '—';
+    if ($h < 48) return rtrim(rtrim(number_format($h, 1), '0'), '.') . ' h';
+    return rtrim(rtrim(number_format($h / 24, 1), '0'), '.') . ' días';
 }
 
 // ---- Export CSV (Dalia) ----
