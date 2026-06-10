@@ -132,6 +132,8 @@ function svg_icon(string $name, int $size = 15): string
         'search'   => '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
         'plus'     => '<path d="M12 5v14M5 12h14"/>',
         'print'    => '<path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M6 14h12v7H6z"/>',
+        'download' => '<path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 19h16"/>',
+        'merge'    => '<path d="M7 21V9M7 9 4 12M7 9l3 3"/><path d="M7 9c0 4 3 5 6 5h4"/><path d="m17 11 3 3-3 3"/>',
         // 9 categorías de activo (design-system §2.1)
         'refrigeracion'         => '<rect x="5" y="2" width="14" height="20" rx="2.5"/><path d="M5 10h14M9 5.5v2M9 13v3.5"/>',
         'maquinariadecafe'      => '<path d="M5 3h14v4H5z"/><path d="M7 7v4a3 3 0 0 0 3 3h1a3 3 0 0 0 3-3V7"/><path d="M15 9h2.5a1.5 1.5 0 0 1 0 3H15"/><path d="M7 21h8M11 17v4"/>',

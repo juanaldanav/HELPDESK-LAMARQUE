@@ -633,6 +633,59 @@ try {
             redirect('dalia/users', ['err' => $res['error']]);
             break;
 
+        // ---------- PROVEEDORES (CRUD Dalia) ----------
+        case 'dalia/suppliers':
+            $u = require_role(['dalia']);
+            render('dalia/suppliers', [
+                'title' => 'Proveedores', 'suppliers' => Suppliers::manage(),
+                'ok' => $_GET['ok'] ?? '', 'err' => $_GET['err'] ?? '',
+            ]);
+            break;
+
+        case 'dalia/supplier/save':
+            $u = require_role(['dalia']);
+            csrf_check();
+            $sid = (int)($_POST['sid'] ?? 0);
+            if (!Suppliers::get($sid)) redirect('dalia/suppliers', ['err' => 'Proveedor no encontrado.']);
+            $res = Suppliers::update($sid, $_POST['name'] ?? '', trim($_POST['email'] ?? ''), trim($_POST['phone'] ?? ''), !empty($_POST['active']));
+            redirect('dalia/suppliers', $res['ok'] ? ['ok' => 'Proveedor actualizado.'] : ['err' => $res['error']]);
+            break;
+
+        case 'dalia/supplier/create':
+            $u = require_role(['dalia']);
+            csrf_check();
+            $res = Suppliers::createOne(trim($_POST['name'] ?? ''), trim($_POST['email'] ?? ''), trim($_POST['phone'] ?? ''), !empty($_POST['active']));
+            redirect('dalia/suppliers', $res['ok'] ? ['ok' => 'Proveedor creado.'] : ['err' => $res['error']]);
+            break;
+
+        case 'dalia/supplier/delete':
+            $u = require_role(['dalia']);
+            csrf_check();
+            Suppliers::softDelete((int)($_POST['sid'] ?? 0));
+            redirect('dalia/suppliers', ['ok' => 'Proveedor eliminado.']);
+            break;
+
+        case 'dalia/supplier/merge':
+            $u = require_role(['dalia']);
+            csrf_check();
+            $res = Suppliers::merge((int)($_POST['from'] ?? 0), (int)($_POST['into'] ?? 0));
+            redirect('dalia/suppliers', $res['ok'] ? ['ok' => 'Proveedores fusionados.'] : ['err' => $res['error']]);
+            break;
+
+        case 'dalia/suppliers/export':
+            $u = require_role(['dalia']);
+            $rows = Suppliers::manage();
+            header('Content-Type: text/csv; charset=utf-8');
+            header('Content-Disposition: attachment; filename="proveedores_lamarque.csv"');
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF"); // BOM para Excel
+            fputcsv($out, ['ID', 'Proveedor', 'Correo', 'Teléfono', 'Autorizado', 'Tickets atendidos']);
+            foreach ($rows as $r) {
+                fputcsv($out, [$r['id'], $r['name'], $r['email'] ?? '', $r['phonenumber'] ?? '', $r['is_active'] ? 'Sí' : 'No', $r['usos']]);
+            }
+            fclose($out);
+            exit;
+
         case 'print':
             $u = require_login();
             $t = Tickets::get((int)($_GET['id'] ?? 0)); // scope sucursal aplicado en get()

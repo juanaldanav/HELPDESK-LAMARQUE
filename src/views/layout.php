@@ -83,9 +83,10 @@ tailwind.config = { theme: { extend: {
               ['dalia/calendar',  'Calendario'],
               ['dalia/assets',    'Activos'],
               ['dalia/users',     'Equipo'],
+              ['dalia/suppliers', 'Proveedores'],
           ];
           foreach ($links as [$route, $lbl]):
-              $on = str_starts_with($cur, $route) || ($route === 'dalia/tickets' && $cur === 'dalia/view') || ($route === 'dalia/users' && str_starts_with($cur, 'dalia/user'));
+              $on = str_starts_with($cur, $route) || ($route === 'dalia/tickets' && $cur === 'dalia/view') || ($route === 'dalia/users' && str_starts_with($cur, 'dalia/user')) || ($route === 'dalia/suppliers' && str_starts_with($cur, 'dalia/supplier'));
       ?>
         <a href="<?= h(url($route)) ?>" class="px-3.5 py-2 rounded-xl font-bold <?= $on ? 'bg-white/15 text-white' : 'text-white/80 hover:bg-white/10' ?>"><?= $lbl ?></a>
       <?php endforeach; endif; ?>
