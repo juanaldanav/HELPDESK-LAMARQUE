@@ -232,6 +232,12 @@ function msg_html(string $content): string
         $docs[] = ['rel' => $m[1], 'name' => $m[2] !== '' ? $m[2] : 'Documento'];
         return '';
     }, $content);
+    // Firmas de la hoja de servicio: [firma_tec:ruta] y [firma_recibe:ruta]
+    $firmas = [];
+    $content = preg_replace_callback('~\[firma_(tec|recibe):([^\]]+)\]~', function ($m) use (&$firmas) {
+        $firmas[] = ['quien' => $m[1] === 'tec' ? 'Técnico' : 'Recibió', 'rel' => $m[2]];
+        return '';
+    }, $content);
 
     $out = nl2br(h(trim($content)));
     if ($photos) {
@@ -249,6 +255,17 @@ function msg_html(string $content): string
         $src = url('img', ['p' => $d['rel']]);
         $out .= '<a href="' . h($src) . '" target="_blank" class="tap inline-flex items-center gap-2 mt-2 px-3 py-2 rounded-xl bg-brand-tint text-brand-dark text-[12.5px] font-bold">'
             . svg_icon('print', 15) . ' ' . h($d['name']) . '</a>';
+    }
+    if ($firmas) {
+        $out .= '<div class="mt-2 flex flex-wrap gap-3">';
+        foreach ($firmas as $f) {
+            if (!preg_match('~^\d+/[A-Za-z0-9._-]+$~', $f['rel']) || strpos($f['rel'], '..') !== false) continue;
+            $src = url('img', ['p' => $f['rel']]);
+            $out .= '<div class="text-center">'
+                . '<img src="' . h($src) . '" class="w-36 h-20 object-contain rounded-lg border border-slate-200 bg-white">'
+                . '<div class="text-[11px] font-bold text-muted mt-1">' . h($f['quien']) . '</div></div>';
+        }
+        $out .= '</div>';
     }
     return $out;
 }

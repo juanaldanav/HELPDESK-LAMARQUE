@@ -97,7 +97,7 @@ $open = is_open_status((int)$t['status']); ?>
     <div x-show="sheet" x-cloak class="fixed inset-0 z-30" @keydown.escape.window="sheet=false">
       <div x-show="sheet" x-transition.opacity.duration.200ms @click="sheet=false" class="absolute inset-0 bg-ink/45"></div>
 
-      <form method="post" action="<?= h(url('tec/close')) ?>" enctype="multipart/form-data"
+      <form method="post" action="<?= h(url('tec/close')) ?>" enctype="multipart/form-data" onsubmit="return serializeFirmas(this)"
         x-show="sheet"
         x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-y-full" x-transition:enter-end="translate-y-0"
         x-transition:leave="transition ease-in duration-200" x-transition:leave-start="translate-y-0" x-transition:leave-end="translate-y-full"
@@ -152,6 +152,31 @@ $open = is_open_status((int)$t['status']); ?>
               <input type="file" name="photo" accept="image/*" capture="environment" class="hidden" @change="foto = $event.target.files.length > 0">
             </label>
           </div>
+
+          <!-- Firmas: técnico y quien recibe en la sucursal -->
+          <div class="space-y-3">
+            <div>
+              <label class="block text-[12px] font-bold uppercase tracking-wide text-muted mb-1.5">Firma del técnico</label>
+              <div class="bg-surface rounded-card p-2">
+                <canvas data-firma="firma_tecnico" class="firma-pad w-full rounded-lg bg-white border border-faint/40" style="height:130px;touch-action:none"></canvas>
+                <div class="flex justify-end mt-1"><button type="button" class="firma-clear tap text-[12px] font-bold text-muted px-2 py-1">Borrar firma</button></div>
+              </div>
+              <input type="hidden" name="firma_tecnico" value="">
+            </div>
+            <div>
+              <label class="block text-[12px] font-bold uppercase tracking-wide text-muted mb-1.5">Nombre de quien recibe (sucursal)</label>
+              <input name="recibe_nombre" placeholder="Ej. encargado de turno"
+                class="w-full bg-surface rounded-card px-4 py-3 text-[14px] placeholder:text-faint outline-none focus:ring-2 focus:ring-brand">
+            </div>
+            <div>
+              <label class="block text-[12px] font-bold uppercase tracking-wide text-muted mb-1.5">Firma de quien recibe</label>
+              <div class="bg-surface rounded-card p-2">
+                <canvas data-firma="firma_recibe" class="firma-pad w-full rounded-lg bg-white border border-faint/40" style="height:130px;touch-action:none"></canvas>
+                <div class="flex justify-end mt-1"><button type="button" class="firma-clear tap text-[12px] font-bold text-muted px-2 py-1">Borrar firma</button></div>
+              </div>
+              <input type="hidden" name="firma_recibe" value="">
+            </div>
+          </div>
         </div>
 
         <div class="shrink-0 px-5 pt-3 pb-6 bg-canvas">
@@ -170,3 +195,46 @@ $open = is_open_status((int)$t['status']); ?>
     </div>
   <?php endif; ?>
 </div>
+
+<script>
+// Signature pads (firma con el dedo en el celular). Una por cada canvas .firma-pad.
+(function () {
+  function setup(canvas) {
+    var dpr = window.devicePixelRatio || 1;
+    function fit() {
+      var r = canvas.getBoundingClientRect();
+      if (!r.width) return;
+      canvas.width = r.width * dpr; canvas.height = r.height * dpr;
+      var c = canvas.getContext('2d');
+      c.scale(dpr, dpr); c.lineWidth = 2.2; c.lineCap = 'round'; c.strokeStyle = '#0f1c1d';
+      canvas._dirty = false;
+    }
+    setTimeout(fit, 60);
+    window.addEventListener('resize', fit);
+    var ctx = canvas.getContext('2d'), drawing = false;
+    function pos(e) {
+      var r = canvas.getBoundingClientRect();
+      var t = e.touches ? e.touches[0] : e;
+      return { x: t.clientX - r.left, y: t.clientY - r.top };
+    }
+    function start(e) { drawing = true; var p = pos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); e.preventDefault(); }
+    function move(e) { if (!drawing) return; var p = pos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); canvas._dirty = true; e.preventDefault(); }
+    function end() { drawing = false; }
+    canvas.addEventListener('pointerdown', start);
+    canvas.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', end);
+    var clr = canvas.parentElement.querySelector('.firma-clear');
+    if (clr) clr.addEventListener('click', function () { ctx.clearRect(0, 0, canvas.width, canvas.height); canvas._dirty = false; });
+  }
+  document.querySelectorAll('.firma-pad').forEach(setup);
+  // Al enviar, vuelca cada firma dibujada al hidden input correspondiente.
+  window.serializeFirmas = function (form) {
+    form.querySelectorAll('.firma-pad').forEach(function (cv) {
+      var name = cv.getAttribute('data-firma');
+      var input = form.querySelector('input[name="' + name + '"]');
+      if (input) input.value = cv._dirty ? cv.toDataURL('image/png') : '';
+    });
+    return true;
+  };
+})();
+</script>

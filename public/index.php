@@ -59,6 +59,22 @@ function save_photos(?array $files, int $ticketId, int $max = 5): array
     return $out;
 }
 
+// Guarda una firma capturada en canvas (dataURL PNG base64). Devuelve ruta relativa o null.
+function save_signature(?string $dataUrl, int $ticketId, string $which): ?string
+{
+    if (!$dataUrl || strpos($dataUrl, 'data:image/png;base64,') !== 0) return null;
+    $b64 = substr($dataUrl, strlen('data:image/png;base64,'));
+    $bin = base64_decode($b64, true);
+    if ($bin === false || strlen($bin) < 200) return null;        // firma vacía/ inválida
+    if (strlen($bin) > 600000) return null;                       // tope ~600KB
+    $which = preg_match('~^(tec|recibe)$~', $which) ? $which : 'firma';
+    $dir = rtrim(cfg('uploads_dir'), '/\\') . '/' . $ticketId;
+    if (!is_dir($dir)) @mkdir($dir, 0775, true);
+    $fname = 'firma_' . $which . '_' . bin2hex(random_bytes(5)) . '.png';
+    if (@file_put_contents($dir . '/' . $fname, $bin) === false) return null;
+    return $ticketId . '/' . $fname;
+}
+
 function serve_image(string $rel): void
 {
     // valida ruta: <ticketId>/<archivo> — sin traversal
@@ -295,6 +311,13 @@ try {
             $sheet = build_service_sheet($_POST);
             $rel = save_photo($_FILES['photo'] ?? null, $id);
             if ($rel) $sheet .= "\n[foto:$rel]";
+            // Firmas capturadas en el celular (canvas → dataURL PNG)
+            $recibe = trim($_POST['recibe_nombre'] ?? '');
+            if ($recibe !== '') $sheet .= "\nRecibió: " . mb_substr($recibe, 0, 80) . " (" . $t['entity_name'] . ")";
+            $fTec = save_signature($_POST['firma_tecnico'] ?? null, $id, 'tec');
+            $fRec = save_signature($_POST['firma_recibe'] ?? null, $id, 'recibe');
+            if ($fTec) $sheet .= "\n[firma_tec:$fTec]";
+            if ($fRec) $sheet .= "\n[firma_recibe:$fRec]";
             Followups::add($id, $u['id'], $sheet, 0, 4);
             Tickets::close($id);
             // PDF de hoja de servicio + correo de cierre con adjunto (best-effort)
